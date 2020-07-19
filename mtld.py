@@ -11,8 +11,7 @@
 
 import logging
 
-logging.basicConfig(level=logging.INFO)
-
+LOG = logging.getLogger(__name__)
 
 def _ttr(types, tokens):
     """(= type-token ratio (Templin, 1957))"""
@@ -42,7 +41,7 @@ def _mtld(seq, ttr_threshold=0.72, reverse=False):
     if seg_count == 0:  # if there was only a single occurence of every word
         raise ValueError("Can't calculate mtld of a sequence with no repeating words.")
     if seq_len < 100:
-        logging.warning("MTLD scores for sequences shorter than 100 words are not reliable.")
+        LOG.warning("MTLD scores for sequences shorter than 100 words are not reliable.")
     return seq_len/seg_count
 
 
@@ -51,7 +50,7 @@ def mtld(seq):
 
     Text length measured in words is divided by a segment count.
     Segments are computed by starting from a word and calculating the
-    the TTR for growing sequences beginning from this word on.
+    TTR for growing sequences beginning from this word on.
     As soon as the sequence's TTR is lower than 0.72 a new segment
     is started.
     The two MTLD values of the sequence and the reversed sequence
