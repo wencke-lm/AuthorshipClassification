@@ -9,8 +9,8 @@
 # Windows 8
 """mtld.py testcase"""
 
-import unittest
 import os
+import unittest
 
 from mtld import mtld
 
@@ -30,12 +30,21 @@ class MtldTestCase(unittest.TestCase):
                          msg=f"Expected a mtld score of 10.4812. Got {mtld_score}.")
 
     def test_on_longer_text_with_several_segments(self):
-        filename = os.path.join(os.path.dirname(__file__), "let_it_go_frozen.txt")
+        filename = os.path.join("data", "frozen", "let_it_go_frozen.txt")
         with open(filename, encoding='utf-8') as resource:
             mtld_score = mtld(resource.read().split())
-            self.assertEqual(round(mtld_score, 4), 53.3137,
-                             msg=f"Expected a mtld score of 53.3137. Got {mtld_score}.")
+            self.assertEqual(round(mtld_score, 4), 45.3591,
+                             msg=f"Expected a mtld score of 45.3591. Got {mtld_score}.")
 
+    def test_on_generator(self):
+        def get_words():
+            filename = os.path.join("data", "frozen", "let_it_go_frozen.txt")
+            with open(filename, encoding='utf-8') as resource:
+                for word in resource.read().split():
+                    yield word
+        mtld_score = mtld(get_words())
+        self.assertEqual(round(mtld_score, 4), 49.0000,
+                         msg=f"Expected a mtld score of 49.0000. Got {mtld_score}.")
 
 if __name__ == "__main__":
     unittest.main()
