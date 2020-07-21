@@ -10,6 +10,7 @@
 """Implementation of lexical diversity measure mtld."""
 
 import logging
+import types
 
 LOG = logging.getLogger(__name__)
 
@@ -62,6 +63,9 @@ def mtld(seq):
     Returns:
         int: MTLD score.
     """
-    if not isinstance(seq, list):
-        raise ValueError("The Input should be a list. Try using split if your input was a string.")
-    return (_mtld(seq) + _mtld(seq, reverse=True))/2
+    if isinstance(seq, list):
+        return (_mtld(seq) + _mtld(seq, reverse=True))/2
+    if isinstance(seq, types.GeneratorType):
+        return _mtld(seq)  # getting the reverse of an iterator proves to be to computationally difficult
+    raise ValueError("The Input should be a list or generator. Try using split if your input was a string.")
+    
