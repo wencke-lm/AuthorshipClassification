@@ -11,8 +11,13 @@
 
 import os
 import unittest
+import sys
 
-from mtld import mtld
+root_dir = os.path.dirname(os.path.dirname(__file__))
+os.chdir(root_dir)
+sys.path.append(root_dir)
+
+from scripts.mtld import mtld
 
 
 class MtldTestCase(unittest.TestCase):
