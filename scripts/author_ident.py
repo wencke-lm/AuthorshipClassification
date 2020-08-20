@@ -33,7 +33,7 @@ class AuthorIdent:
         + Henry Rider Haggard
         + James Fenimore Cooper
         + R M Ballantyne
-        + Ropert Louis Stevenson
+        + Robert Louis Stevenson
         + Sir Walter Scott
         + William Dean Howells
 
