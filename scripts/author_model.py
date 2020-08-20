@@ -153,7 +153,7 @@ class AuthorModel(dict):
                     file_out.write(' '.join(tokens) + '\n')
         elif os.path.isdir(source):
             if not os.path.isdir(goal):
-                os.makedirs(goal)
+                os.mkdir(goal)
             for fl in os.listdir(source):
                 if os.path.isfile(os.path.join(source, fl)):
                     cls.preprocess(os.path.join(source, fl), os.path.join(goal, fl))

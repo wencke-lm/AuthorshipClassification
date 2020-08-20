@@ -34,7 +34,7 @@ def main():
         description="Manages author profiles and performs authorship attribution.",
         epilog="Source files need to be preprocessed, "
                "containing one sentence per line and a space between tokens.")
-    parser.add_argument('--catalog', nargs=1, metavar="filename",
+    parser.add_argument('--catalog', nargs=1, metavar="catalog",
                         help="Path to a file containing lines of the form "
                              r"<author>\t<pretrained model csv-filename> .")
     parser.add_argument('--classify', nargs=1, metavar="source",
