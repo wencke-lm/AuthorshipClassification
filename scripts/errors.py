@@ -1,42 +1,45 @@
 # -*- coding: utf-8 -*-
 
-# Wencke Liermann
+# Wencke Liermann - wliermann@uni-potsdam.de
 # Universität Potsdam
 # Bachelor Computerlinguistik
 
 # 21/07/2020
 # Python 3.7.3
 # Windows 8
-"""User-defined exceptions for the project classes."""
+"""Exceptions related decorators and classes."""
+
+import functools
+import logging
+
+class ScarceDataError(Exception):
+    pass
 
 class CatalogError(Exception):
     pass
 
-class ExistingAuthorError(CatalogError):
-    def __init__(self, author):
-        self.msg = f"An entry for the author '{author}' already exists."
-
-    def __str__(self):
-        return self.msg
-
-class NotExistingAuthorError(CatalogError):
-    def __init__(self, author):
-        self.msg = f"No entry for the '{author}' exists."
-
-    def __str__(self):
-        return self.msg
-
-class NotEnoughAuthorsError(CatalogError):
-    def __init__(self, catalog):
-        self.msg = f"The catalog '{catalog}' is not trained for atleast two authors."
-
-    def __str__(self):
-        return self.msg
-
-class MalformedCatalogError(CatalogError):
-    def __init__(self, catalog):
-        self.msg = (f"Check the catalog '{catalog}', it should contain two "
-                     "columns named 'author_name' and 'pretrained_model'.")
-
-    def __str__(self):
-        return self.msg
+def log_exception(logger):
+    """
+    A decorator that takes note of all exceptions thrown by
+    the decorated function and logs the functioncall
+    including positional and keyword arguments together with
+    the traceback.
+    
+    Args:
+        logger(logging.Logger)
+    """
+    def _log(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            pos_args = [repr(a) for a in args]
+            key_args = [f"{n}={a!r}" for n,a in kwargs.items()]
+            msg = f"calling {func.__name__}({', '.join(pos_args + key_args)})..."
+            try:
+                value = func(*args, **kwargs)
+            except:
+                logger.error(msg, exc_info=True)
+                raise
+            else:
+                return value
+        return wrapper
+    return _log

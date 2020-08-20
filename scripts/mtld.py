@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Wencke Liermann
+# Wencke Liermann - wliermann@uni-potsdam.de
 # Universität Potsdam
 # Bachelor Computerlinguistik
 # 4. Semester
@@ -12,6 +12,8 @@
 
 import logging
 import types
+
+from scripts.errors import ScarceDataError
 
 
 LOG = logging.getLogger(__name__)
@@ -28,7 +30,6 @@ def _mtld(seq, ttr_threshold=0.72, reverse=False):
     seq_ttr = 1.0  # ttr of previous segment
     token_count = 0  # (not unique) words in the current segment
     types = set()  # different words in the current segment
-
     for word in {True: reversed, False: lambda s: s}[reverse](seq):
         seq_len += 1
         token_count += 1
@@ -43,7 +44,7 @@ def _mtld(seq, ttr_threshold=0.72, reverse=False):
     if seq_ttr > ttr_threshold:
         seg_count += ((1.0 - seq_ttr)/(1.0 - ttr_threshold))
     if seg_count == 0:  # if there was only a single occurence of every word
-        raise ValueError("Can't calculate mtld of a sequence with no repeating words.")
+        raise ScarceDataError("Can't calculate MTLD score of a sequence with no repeating words.")
     if seq_len < 100:
         LOG.warning("MTLD scores for sequences shorter than 100 words are not reliable.")
     return seq_len/seg_count
@@ -69,5 +70,6 @@ def mtld(seq):
     if isinstance(seq, list):
         return (_mtld(seq) + _mtld(seq, reverse=True))/2
     if isinstance(seq, types.GeneratorType):
-        return _mtld(seq)  # getting the reverse of an iterator proves to be to computationally difficult
-    raise ValueError("The Input should be a list or generator. Try using split if your input was a string.")
+        return _mtld(seq)  # getting the reverse of an iterator is computationally difficult
+    raise ValueError("The Input should be a list or generator. "
+                     "Try using split if your input was a string.")

@@ -1,0 +1,43 @@
+{
+    "version": 1,
+    "filters": {
+        "errorfilter": {
+            "()": "LoggingErrorFilter"
+        }
+    },
+    "disable_existing_loggers": false,
+    "formatters": {
+        "filef": {
+            "datefmt": "%d/%m/%y %H:%M",
+            "format": "\n%(asctime)s - %(name)s:%(levelname)s:%(message)s"
+        },
+        "consolef": {
+            "format": "%(levelname)s:%(message)s"
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "WARNING",
+            "formatter": "consolef",
+            "stream": "ext://sys.stdout",
+            "filters": ["errorfilter"]
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "level": "INFO",
+            "formatter": "filef",
+            "filename": "data/project_log.log",
+            "mode": "a",
+            "encoding": "utf-8"
+        }
+    },
+
+    "loggers": { },
+
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO"
+    }
+}

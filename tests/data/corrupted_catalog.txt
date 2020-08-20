@@ -1,0 +1,3 @@
+olaf
+elsa	tests/data/elsa.csv
+anna	tests/data/anna.csv
