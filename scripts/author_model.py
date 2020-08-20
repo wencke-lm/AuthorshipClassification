@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Wencke Liermann
+# Wencke Liermann - wliermann@uni-potsdam.de
 # Universität Potsdam
 # Bachelor Computerlinguistik
 # 4. Semester
 
-# 25/07/2020
+# 19/08/2020
 # Python 3.7.3
 # Windows 8
 """Representation of author profiles as feature vectors."""
 
-from collections import Counter
-import csv
+from collections import namedtuple
 import logging
 import os
 
@@ -21,220 +20,235 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
 from tqdm import tqdm
 
+from scripts.distribution import Distribution, IntegerDistribution
 from scripts.mtld import mtld
+from scripts.errors import ScarceDataError, log_exception
 
 
 LOG = logging.getLogger(__name__)  # module logger
-MOST_FREQUENT_WORDS = os.path.join("data", "most_common_words.csv")
+FREQ_WRDS = os.path.join("data", "most_common_words.csv")
 
 
-class AuthorModel:
-    """Representation of a sample of an author's collected works.
-    
-    This representation as a numeric feature vector can be
-    understood as an author profile.
+class AuthorModel(dict):
+    """Dict subclass to represent a numeric feature vector.
 
-    Attributes:
-        features(dict): A mapping from feature names(str) to
-            values(int) - feature vector.
+    This feature vector calculated from a sample of an
+    author's collected works can be understood as an
+    author profile.
+
+    The following features are examined:
+        + mean/standard deviation for word length
+        + mean/standard deviation for sentence length
+        + distribution of sentence lengths
+        + distribution of word lengths
+        + relative frequencies of POS-tag trigrams
+        + relative frequencies of common tokens
+        + mtld score on token level
     """
-    def __init__(self):
-        self.features = dict()
 
     @classmethod
+    @log_exception(LOG)
     def train(cls, source):
-        """Create new author profile.
+        """Calculate a feature vector from text samples.
 
         Args:
-            source(str): Path to an utf8-encoded .txt-file.
-                Alternatively one can also pass a directory containing
-                such files.
-                All the files must have already been preprocessed,
-                separating tokens with whitespaces and giving each
-                sentence a single line. One can use the function
-                <AuthorModel.preprocess> to perform this preprocessing.
-                
+            source(str): Path to an utf8-encoded txt-file.
+                Alternatively one can also pass a directory
+                containing such files.
+                All the files must have already been
+                preprocessed, separating tokens with
+                whitespaces and giving each sentence
+                a single line. One can use the function
+                <AuthorModel.preprocess> to perform
+                this preprocessing.
 
         Returns:
-            AuthorModel: Newly created author profile.
+            AuthorModel: New author profile.
         """
         if os.path.isfile(source):
             files = [source]
         elif os.path.isdir(source):
-            files = [os.path.join(source, fl) for fl in os.listdir(source)]
+            files = [os.path.join(source, fl) for fl in os.listdir(source)
+                     if os.path.isfile(os.path.join(source, fl))]
             if files == []:
-                LOG.error(f"Passed argument '{source}' matches an empty directory.")
-                return None
+                raise FileNotFoundError(f"method 'train' requires the directory to contain files")
         else:
-            LOG.error(f"Passed argument '{source}' matches no file or directory.")
-            return None
-
-        author_pr = AuthorModel()
-        author_pr._extract_features(files)
-        return author_pr
+            LOG.info(f"current working directory: {os.getcwd()}")
+            raise FileNotFoundError(f"passed argument '{source}' matches no file or directory")
+        profile = AuthorModel()
+        profile._extract_features(files)
+        return profile
 
     @classmethod
-    def read_csv(cls, filename):
-        """Load pretrained author profile.
-        
+    @log_exception(LOG)
+    def read_csv(cls, source):
+        """Load precalculated feature vector from file.
+
         Args:
-            filename(str): File created by the
-                function <AuthorModel.write_csv>.
+            source(str): File created by the function
+                <AuthorModel.write_csv> with lines of
+                the format: <feature_name>\t<numeric_value>.
 
         Returns:
             AuthorModel: Loaded author profile.
         """
-        if not os.path.isfile(filename):
-            raise FileNotFoundError(f"Passed argument '{filename}' matches no file.")
+        if not os.path.isfile(source):
+            LOG.info(f"current working directory: {os.getcwd()}")
+            raise FileNotFoundError(f"passed argument '{source}' matches no file")
 
-        author_pr = AuthorModel()
-        with open(filename, 'r', encoding='utf-8') as file_in:
-            csv_reader = csv.DictReader(file_in, delimiter='\t')
-            for ln, line in enumerate(csv_reader, 1):
-                try:
-                    value = float(line["value"])
-                except TypeError:
-                    LOG.warning(f"Ignored line {ln}; "
-                        "missing float value at second position.")
+        profile = AuthorModel()
+        with open(source, 'r', encoding='utf-8') as file_in:
+            for ln, line in enumerate(file_in, 1):
+                line = line.rstrip().split('\t')
+                if len(line) == 2:
+                    try:
+                        value = float(line[1])
+                    except ValueError:
+                        LOG.warning(f"ignored line {ln}; not-float value in second column")
+                        LOG.info(f"lines should have the format: <feature_name>\t<numeric_value>")
+                    else:
+                        profile[line[0]] = value
                 else:
-                    author_pr.features[line["feature"]] = value
-        return author_pr
+                    LOG.warning(f"ignored line {ln}; missing column")
+                    LOG.info(f"lines should have the format: <feature_name>\t<numeric_value>")
+        return profile
 
-    def write_csv(self, filename):
-        """Save pretrained model in tab-separated .csv-file.
-        
-        Lines have the form <feature_name>\t<normalized_frequency>.
+    def write_csv(self, goal):
+        """Save calculated feature vector in tab-separated file.
+
+        Lines have the format <feature_name>\t<numeric_value>.
 
         Args:
-            filename (str): The model is saved under this name.
-
-        Returns:
-            None
+            goal(str): Location/name for the file.
         """
-        with open(filename, 'w', encoding='utf-8') as file_out:
-            file_out.write("feature\tvalue\n")
-            for ftr, freq in self.features.items():
+        with open(goal, 'w', encoding='utf-8', newline="") as file_out:
+            for ftr, freq in self.items():
                 file_out.write(f"{ftr}\t{freq}\n")
 
-    @staticmethod
-    def preprocess(source, target):
-        """Convert files to the format required by <AuthorModel.train>.
+    @classmethod
+    @log_exception(LOG)
+    def preprocess(cls, source, goal):
+        """Convertion to the format required by <AuthorModel.train>.
 
-        By the means of sentence tokenization each sentence is placed
-        on its own line. The sentences are word tokenized and tokens
-        separated by one space.
+        By the means of sentence tokenization each sentence is
+        placed on its own line. The sentences are word tokenized
+        and tokens separated by a single space.
 
         Args:
-            source(str): utf8-encoded .txt-file one wants to preprocess.
-            target(str): Where to save the preprocessed version to.
-
-        Returns:
-            None
+            source(str): Path to an utf8-encoded txt-file.
+                Alternatively one can also pass a directory
+                containing such files.
+            goal(str): Location/name for the preprocessed version.
         """
-        with open(source, 'r', encoding='utf-8') as file_in, \
-             open(target, 'w', encoding='utf-8') as file_out:
-            text = ''
-            for line in file_in:
-                text += line.rstrip() + ' '
-            sents = tokenize.sent_tokenize(text)
-            for s in sents:
-                tokens = tokenize.word_tokenize(s)
-                file_out.write(' '.join(tokens) + '\n')
+        LOG.info(f"Preprocessing '{source}'...")
+        if os.path.isfile(source):
+            with open(source, 'r', encoding='utf-8') as file_in, \
+                 open(goal, 'w', encoding='utf-8', newline="") as file_out:
+                text = ''
+                for line in file_in:
+                    text += line.rstrip() + ' '
+                sents = sent_tokenize(text)
+                for s in sents:
+                    tokens = word_tokenize(s)
+                    file_out.write(' '.join(tokens) + '\n')
+        elif os.path.isdir(source):
+            if not os.path.isdir(goal):
+                os.makedirs(goal)
+            for fl in os.listdir(source):
+                if os.path.isfile(os.path.join(source, fl)):
+                    cls.preprocess(os.path.join(source, fl), os.path.join(goal, fl))
+        else:
+            LOG.info(f"current working directory: {os.getcwd()}")
+            raise FileNotFoundError(f"passed argument '{source}' matches no file or directory")
 
-######################################## private methods ########################################
+#################
+# private methods
+#################
 
+    @log_exception(LOG)
     def _extract_features(self, files):
-        """Fill feature vector with properties extracted from .txt-files.
-        + average word length
-        + average sentence length
-        + sentence length distribution
-        + pos-tag trigrams frequency
-        + most common word frequency
-        + mtld score on word level
-        """
-        cw = {"<none>":0}  # common word count; including function words
-        with open(MOST_FREQUENT_WORDS, 'r', encoding='utf-8') as cw_file:
-            for line in cw_file:
-                cw[line.rstrip()] = 0
-        trigram_dist = Counter()  # frequency counter of POS-tag trigrams
-        sen_len_dist = Counter()  # frequency of certain sentence length ranges
-        word_count, acc_word_len = 0, 0  # accumulated word length
-        sen_count, acc_sen_len = 0, 0  # accumulated sentence length
-        acc_mtld = 0  # accumulated mtld scores of all files
+        """Build up feature vector"""
+        word_len_dist = IntegerDistribution()
+        sent_len_dist = IntegerDistribution()
+        trigram_dist = Distribution()  # POS-tag trigrams
+        freq_word_dist = Distribution()  # 90 most common lemmas in trainings set
+        punctuation_dist = Distribution()
+        acc_mtld = 0
 
-        for filename in tqdm(files):
-            acc_mtld += mtld(self._get_words(filename))
-            collect = []  # contains up to one complete trigram
-            # features on sentence level
-            for s in self._get_tagged_sentences(filename):
-                sen_count += 1
-                acc_sen_len += len(s)
-                sen_len_dist[self._get_partition(len(s))] += 1
-                # features on token level
-                for token, tag in s:
-                    lemma = self._get_lemma(token, tag)
-                    if lemma in cw:
-                        cw[lemma] += 1
+        for fl in tqdm(files):
+            try:
+                acc_mtld += mtld(self._get_words(fl))
+            except ScarceDataError as e:
+                raise ScarceDataError(f"file '{fl}' not appropriate for training") from e
+            collect = []
+            for sent in self._nlp(fl):
+                sent_len_dist.inc(len(sent))
+                for word in sent:
+                    if word.punct:
+                        punctuation_dist.inc(word.text)
                     else:
-                        cw["<none>"] += 1
-                    word_count += 1
-                    acc_word_len += len(token)
-                    collect.append(tag)
+                        word_len_dist.inc(len(word.text))
+                    if word.freq_wrd:
+                        freq_word_dist.inc(word.lemma)
+                    else:
+                        freq_word_dist.inc("<none>")
+                    collect.append(word.tag)
                     if len(collect) == 3:
-                        trigram_dist[str(collect)] += 1
+                        trigram_dist.inc(str(collect))
                         del collect[0]
-        # word_count and sen_count can't be empty otherwise mtld would have thrown an error
-        # normalize all features and add them to the feature vector
-        self._add_feature(trigram_dist, normalize=((word_count - 2*len(files))))
-        self._add_feature(sen_len_dist, normalize=sen_count)
-        self._add_feature(("<average_word_length>", acc_word_len), normalize=word_count*10)
-        self._add_feature(("<average_sen_length>", acc_sen_len), normalize=sen_count*100)
-        self._add_feature(("<mtld_score>", acc_mtld), normalize=len(files)*100)
-        self._add_feature(cw, normalize=word_count)
 
-    def _add_feature(self, name_value, normalize=1):
-        """Normalize feature before adding it to the feature vector."""
-        if isinstance(name_value, dict):
-            for ftr, freq in name_value.items():
-                self.features[ftr] = round(freq/normalize, 10)
-        elif isinstance(name_value, tuple):
-            ftr, freq = name_value
-            self.features[ftr] = round(freq/normalize, 10)
+        # word_len_dist, freq_word_dist are checked implicitely via trigram_dist
+        if (sent_len_dist.total() < 2 or trigram_dist.total() < 1 or punctuation_dist.total() < 1):
+            LOG.info(f"at least two sentences, three consecutive words and one punctuation mark "
+                     "have to be included in the data")
+            raise ScarceDataError(f"not enough input data")
+
+        self.update({f"<w{key}>": value for key, value in word_len_dist.prob_dist().items()})
+        self["<mean_word_len>"] = word_len_dist.mean()
+        self["<stdev_word_len>"] = word_len_dist.stdev(m=self["<mean_word_len>"])
+        self.update({f"<s{key}>": value for key, value in sent_len_dist.prob_dist().items()})
+        freq_word_dist.plot("oh my",[])
+        self["<mean_sent_len>"] = sent_len_dist.mean()
+        self["<stdev_sent_len>"] = sent_len_dist.stdev(m=self["<mean_sent_len>"])
+        self.update(trigram_dist.prob_dist())
+        self.update(freq_word_dist.prob_dist())
+        self.update(punctuation_dist.prob_dist())
+        self["<mtld_score>"] = (acc_mtld/len(files))
 
     @staticmethod
     def _get_words(filename):
-        """Generator for words of a file"""
+        """Generate words of a file."""
         with open(filename, 'r', encoding='utf-8') as file_in:
             for line in file_in:
                 for token in line.split():
                     yield token
 
     @staticmethod
-    def _get_tagged_sentences(filename):
-        """Generator with progressbar for tagged sentences of a file."""
+    def _nlp(filename):
+        """Yields the sentences of a file one at a time and
+           as a sequence of tokens with additional information.
+        """
+        # read in frequent words of interest
+        with open(FREQ_WRDS, 'r', encoding='utf-8') as file_in:
+            freq_wrd_lst = [wrd.rstrip() for wrd in file_in]
+        # create struct to represent a single item
+        Item = namedtuple('Item', ['text', 'lemma', 'tag', 'freq_wrd', 'punct'])
+
         with tqdm(total=os.stat(filename).st_size, leave=False) as pbar:
             with open(filename, 'r', encoding='utf-8') as file_in:
                 for line in file_in:
                     pbar.update(len(line.encode('utf-8')) + 1)
-                    tagged = pos_tag(line.split())
-                    yield tagged
-
-    @staticmethod
-    def _get_partition(s_len):
-        """Get interval for sentence length distribution."""
-        if s_len <= 5:
-            return "<sen_len_0-5>"
-        if s_len <= 20:
-            return "<sen_len_5-20>"
-        if s_len <= 40:
-            return "<sen_len_20-40>"
-        if s_len <= 65:
-            return "<sen_len_40-65>"
-        if s_len <= 95:
-            return "<sen_len_65-95>"
-        if s_len <= 130:
-            return "<sen_len_95-130>"
-        return "<sen_len_130<>"
+                    items = []
+                    for token, tag in pos_tag(line.split()):
+                        lemma = AuthorModel._get_lemma(token, tag)
+                        freq_wrd = False
+                        if lemma in freq_wrd_lst:
+                            freq_wrd = True
+                        punct = False
+                        if token in ['.', ';', ',', '?', '!']:
+                            punct = True
+                        items.append(Item(token, lemma, tag, freq_wrd, punct))
+                    yield items
 
     @staticmethod
     def _get_lemma(word, nltk_pos_tag, lemmatizer=WordNetLemmatizer()):
@@ -243,14 +257,7 @@ class AuthorModel:
                     "N": wordnet.NOUN,
                     "V": wordnet.VERB,
                     "R": wordnet.ADV}
-        pos_tag = tag_dict.get(nltk_pos_tag[0])
-        if pos_tag is None:
+        pos = tag_dict.get(nltk_pos_tag[0])
+        if pos is None:
             return word.lower()
-        return lemmatizer.lemmatize(word.lower(), pos_tag)
-
-    # necessary for the unittests to work
-    def __eq__(self, other):
-        if self.features == other.features:
-            return True
-        return False
-
+        return lemmatizer.lemmatize(word.lower(), pos)
