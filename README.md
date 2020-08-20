@@ -61,7 +61,7 @@ Enter a command following the scheme below in order to:
    ```
 Additionally a target --verbosity can be used with any of the above schemes to adjust the amout of output (0=errors, 1=warnings and above, 2=info and above). Default is 1.
 
-## Options
+## Arguments
 + AUTHOR
     + Name of the class.
     + This name will be put out, when the classifier identifies a text as belonging to the class.
@@ -80,9 +80,9 @@ Otherwise problems involving the relative paths to the profiles saved in it will
 + `python main.py --catalog data/gutenbergident.txt --classify "corpus/test/Anthony Trollope/Anthony Trollope___A Ride Across Palestine"`
 
 ## Author
-Wencke Liermann
-Uni Potsdam
-Computerlinguistik 4. Semester
-SoSe20
+Wencke Liermann\n
+Uni Potsdam\n
+Computerlinguistik 4. Semester\n
+SoSe20\n
 
 For further inquiries and feedback, please contact: wliermann@uni-potsdam.de
