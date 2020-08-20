@@ -80,9 +80,9 @@ Otherwise problems involving the relative paths to the profiles saved in it will
 + `python main.py --catalog data/gutenbergident.txt --classify "corpus/test/Anthony Trollope/Anthony Trollope___A Ride Across Palestine"`
 
 ## Author
-Wencke Liermann\n
-Uni Potsdam\n
-Computerlinguistik 4. Semester\n
-SoSe20\n
+Wencke Liermann  
+Uni Potsdam  
+Computerlinguistik 4. Semester  
+SoSe20  
 
 For further inquiries and feedback, please contact: wliermann@uni-potsdam.de
