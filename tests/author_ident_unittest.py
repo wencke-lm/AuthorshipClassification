@@ -12,23 +12,18 @@
 
 import logging
 import os
-import sys
 import unittest
 from unittest import mock  # to prevent dependencies on the AuthorModel class
 
-root_dir = os.path.dirname(os.path.dirname(__file__))
-os.chdir(root_dir)
-sys.path.append(root_dir)
-
-from scripts.author_ident import AuthorIdent, LOG
-from scripts.errors import CatalogError
+from lib.author_ident import AuthorIdent, LOG
+from lib.errors import CatalogError
 
 
 LOG.setLevel(logging.CRITICAL)
 
 
 class AccuracyTestCase(unittest.TestCase):
-    @mock.patch("scripts.author_ident.AuthorIdent", autospec=True)
+    @mock.patch("lib.author_ident.AuthorIdent", autospec=True)
     def test_accuracy_calculation(self, mock_author_ident):
         mock_author_ident.classify.side_effect = ["Jane Austen", "George Eliot", "George Eliot",
                                                   "Charlotte Bronte", "Charlotte Bronte"]
@@ -36,7 +31,7 @@ class AccuracyTestCase(unittest.TestCase):
                      ("", "Jane Austen"), ("", "Charlotte Bronte")]
         self.assertEqual(AuthorIdent.accuracy(mock_author_ident, input_vec), 0.6)
 
-    @mock.patch("scripts.author_ident.AuthorIdent", autospec=True)
+    @mock.patch("lib.author_ident.AuthorIdent", autospec=True)
     def test_empty_input_vec(self, mock_author_ident):
         with self.assertRaises(ValueError, msg="ValueError should have been raised."):
             AuthorIdent.accuracy(mock_author_ident, [])
@@ -47,15 +42,15 @@ class ClassifyTestCase(unittest.TestCase):
         self.assertEqual(AuthorIdent._simil({'i': 0.5, "<mtld_score>": 50},
                                             {'i': 0.8, "<stdev_word_len>": 1.5}), 0.875)
 
-    @mock.patch("scripts.author_ident.AuthorIdent", catalog="catalog.txt",
+    @mock.patch("lib.author_ident.AuthorIdent", catalog="catalog.txt",
                 catalog_content={"author1": "author1.csv", "author2": "author2.csv"},
                 profiles={"author1": {}, "author2": {}}, autospec=True)
-    @mock.patch("scripts.author_ident.AuthorModel", autospec=True)
+    @mock.patch("lib.author_ident.AuthorModel", autospec=True)
     def test_returned_best_match(self, mock_author_model, mock_author_ident):
         mock_author_ident._simil.side_effect = [2.5, 1.6]
         self.assertEqual(AuthorIdent.classify(mock_author_ident, ""), "author2")
 
-    @mock.patch("scripts.author_ident.AuthorIdent", catalog="catalog.txt",
+    @mock.patch("lib.author_ident.AuthorIdent", catalog="catalog.txt",
                 catalog_content={}, autospec=True)
     def test_too_small_catalog(self, mock_author_ident):
         with self.assertRaises(CatalogError):
@@ -64,13 +59,13 @@ class ClassifyTestCase(unittest.TestCase):
 
 class ForgetTestCase(unittest.TestCase):
     @classmethod
-    @mock.patch("scripts.author_ident.os")
-    @mock.patch("scripts.author_ident.AuthorIdent", catalog="catalog.txt",
+    @mock.patch("lib.author_ident.os")
+    @mock.patch("lib.author_ident.AuthorIdent", catalog="catalog.txt",
                 catalog_content={"author1": "author1.csv"},
                 profiles={"author1": {}}, autospec=True)
     def setUpClass(cls, mock_author_ident, mock_os):
         # prevent file system from being touched
-        with mock.patch('scripts.author_ident.open', mock.mock_open()) as filesys_mock:
+        with mock.patch('lib.author_ident.open', mock.mock_open()) as filesys_mock:
             cls.filesys_mock = filesys_mock
             cls.mock_author_ident = mock_author_ident
             cls.mock_os = mock_os
@@ -95,22 +90,22 @@ class ForgetTestCase(unittest.TestCase):
 
 class InitTestCase(unittest.TestCase):
     @classmethod
-    @mock.patch("scripts.author_ident.AuthorModel", autospec=True)
+    @mock.patch("lib.author_ident.AuthorModel", autospec=True)
     def setUpClass(cls, mock_author_model):
         mock_author_model.read_csv.return_value = mock_author_model
         cls.classifier = AuthorIdent(os.path.join("tests", "data", "frozen_catalog.csv"))
 
     def test_creating_new_classifier(self):
-        with mock.patch('scripts.author_ident.open', mock.mock_open()) as filesys_mock:
+        with mock.patch('lib.author_ident.open', mock.mock_open()) as filesys_mock:
             AuthorIdent("empty_catalog.csv")
             filesys_mock.assert_called_once()
 
     def test_loading_corrupted_catalog(self):
         with self.assertLogs(LOG, level='WARNING') as logger:
             AuthorIdent(os.path.join("tests", "data", "corrupted_catalog.txt"))
-        msg1 = ("WARNING:scripts.author_ident:Ignored line 3; could not open the file "
+        msg1 = ("WARNING:lib.author_ident:Ignored line 3; could not open the file "
                 "'tests/data/anna.csv' supposed to contain the pretrained model.")
-        msg2 = "WARNING:scripts.author_ident:Ignored line 1; missing column."
+        msg2 = "WARNING:lib.author_ident:Ignored line 1; missing column."
         # two asserts but actually only one assertion that logging works as expected
         self.assertIn(msg1, logger.output)
         self.assertIn(msg2, logger.output)
@@ -125,16 +120,16 @@ class InitTestCase(unittest.TestCase):
 
 class TrainTestCase(unittest.TestCase):
     @classmethod
-    @mock.patch("scripts.author_ident.AuthorIdent", catalog="catalog.txt",
+    @mock.patch("lib.author_ident.AuthorIdent", catalog="catalog.txt",
                 catalog_content={"author1": "author1.csv"},
                 profiles={"author1": {}}, autospec=True)
-    @mock.patch("scripts.author_ident.AuthorModel", autospec=True)
+    @mock.patch("lib.author_ident.AuthorModel", autospec=True)
     def setUpClass(cls, mock_author_model, mock_author_ident):
         # mock AuthorModel methods
         mock_author_model.train.return_value = mock_author_model
         mock_author_model.write_csv.return_value = None
         # prevent file system from being touched
-        with mock.patch('scripts.author_ident.open', mock.mock_open()) as filesys_mock:
+        with mock.patch('lib.author_ident.open', mock.mock_open()) as filesys_mock:
             cls.filesys_mock = filesys_mock
             cls.mock_author_model = mock_author_model
             cls.mock_author_ident = mock_author_ident
@@ -156,7 +151,3 @@ class TrainTestCase(unittest.TestCase):
 
     def test_variable_profiles_updated(self):
         self.assertEqual(list(self.mock_author_ident.profiles.keys()), ["author1", "author2"])
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -16,15 +16,17 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scripts.errors import ScarceDataError, log_exception
+from lib.errors import ScarceDataError, log_exception
 
 
 LOG = logging.getLogger(__name__)  # module logger
 
 
 class Distribution(Counter):
-    """Subclass of collections.Counter for storing distributions
-        of hashable items.
+    """Subclass of collections.Counter.
+
+    Exhibits the same behaviour as its parent class but
+    offers additional functionality for normalizing counts.
 
     Args:
         iterable: When given, initialize with its items.
@@ -39,27 +41,26 @@ class Distribution(Counter):
             self.inc(item)
 
     def inc(self, item):
-        """Update distribution.
+        """Add an observations of one item.
 
         Args:
-            item(hashable type): Increase count of 'item' by one,
-                after adding it if not yet present.
+            item(hashable type): Data point to be added.
         """
-        self._total += 1
         self[item] += 1
+        self._total += 1
 
     @log_exception(LOG)
     def prob_dist(self, iterable=None):
-        """Calculate the relative frequency of all items.
-        
+        """Calculate probability distribution over all observations.
+
         Args:
-            iterable: Specify to only include a subset of items.
+            iterable: Specify to only include a subset.
 
         Returns:
-            dict: Probability distribution over items.
+            dict: Dict with normalized counts.
         """
         if self._total < 1:
-            raise ScarceDataError("method 'prob_dist' needs atleast one data point")
+            raise ScarceDataError("Method 'prob_dist' needs atleast one data point.")
         if iterable is None:
             iterable = self.keys()
         return {k:self[k]/self._total for k in iterable}
@@ -83,17 +84,24 @@ class Distribution(Counter):
             iterable = self.keys()
             if not iterable:
                 raise ScarceDataError("method 'plot' needs atleast one data point")
+        else:
+            # because we need to iterate more than once
+            if iter(iterable) is iterable:
+                iterable = list(iterable)
+        # organize data
         probs = self.prob_dist(iterable)
         slices = sorted(iterable, key=lambda x:probs[x], reverse=True)
         sizes = [probs[slc] for slc in slices]
-        for i, x in enumerate(slices):
+        # filter minority observations
+        for i in range(len(slices)):
             if sizes[i] < 0.02:
                 slices = slices[:i] + ['<other>']
                 sizes = sizes[:i] + [sum(sizes[i:])]
                 break
+        # plot settings
         fig, ax = plt.subplots()
         ax.pie(sizes, labels=["{:.2%}".format(v) for v in sizes], shadow=False, startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        ax.axis('equal')
         plt.title(title)
         plt.legend(slices, loc=3)
         plt.show()
@@ -102,11 +110,10 @@ class Distribution(Counter):
 class IntegerDistribution(Distribution):
     @log_exception(LOG)
     def inc(self,item):
-        """Update distribution.
+        """Add an observations of one item.
 
         Args:
-            item(int): Increase count of 'item' by one,
-                after adding it if not yet present.
+            item(int): Data point to be added.
         """
         if not isinstance(item, int):
             raise TypeError("items have to be of type integer")
@@ -164,6 +171,10 @@ class IntegerDistribution(Distribution):
             iterable = self.keys()
             if not iterable:
                 raise ScarceDataError("method 'plot' needs atleast one data point")
+        else:
+            # because we need to iterate more than once
+            if iter(iterable) is iterable:
+                iterable = list(iterable)
         # organize data
         bars = sorted(iterable)
         heights = [self.prob_dist(iterable)[k] for k in bars]

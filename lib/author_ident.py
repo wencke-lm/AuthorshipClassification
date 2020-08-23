@@ -13,8 +13,8 @@
 import logging
 import os
 
-from scripts.author_model import AuthorModel
-from scripts.errors import CatalogError, log_exception
+from lib.author_model import AuthorModel
+from lib.errors import CatalogError, log_exception
 
 
 LOG = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ class AuthorIdent:
         """
         if author in self.profiles:
             raise CatalogError(f"An entry for '{author}' already exists.")
+        LOG.info(f"Add entry for '{author}'...")
         profile = AuthorModel.train(source)
         self.profiles[author] = profile
         filepath = os.path.join(os.path.dirname(self.catalog), author)
@@ -164,12 +165,14 @@ class AuthorIdent:
     def destroy(self):
         """Delete the catalog and all pretrained models linked to it."""
         LOG.info(f"Delete catalog '{self.catalog}'...")
+        # type cast so a new object is created
+        # the original object is modified while iterating
         for author in list(self.catalog_content.keys()):
             self.forget(author)
         if os.path.isfile(self.catalog):
             os.remove(self.catalog)
         else:
-            LOG.warning(f"Catalog '{self.catalog}' could not be deleted.")
+            LOG.warning(f"Catalog file '{self.catalog}' could not be deleted.")
 
 #################
 # private methods
@@ -202,12 +205,13 @@ class AuthorIdent:
     @staticmethod
     def _simil(known_author, unknown_author):
         """Calculate similarity of two author profiles."""
-        weights = {"<mean_word_len": 0.05, "<stdev_word_len>": 0.05, "<mean_sent_len": 0.05,
-                   "<stdev_sent_len>": 0.05, "<mtld_score>": 0.01}
+        weights = {"<mean_word_len>": 0.05, "<stdev_word_len>": 0.05, "<mean_sent_len>": 0.005,
+                   "<stdev_sent_len>": 0.005, "<mtld_score>": 0.01}
         diff = 0
         for feature_kn, value in known_author.items():
             diff += abs(value - unknown_author.get(feature_kn, 0))*weights.get(feature_kn, 1)
         for feature_unk, value in unknown_author.items():
             if feature_unk not in known_author:
                 diff += abs(-value)*weights.get(feature_unk, 1)
+        print(diff)
         return diff

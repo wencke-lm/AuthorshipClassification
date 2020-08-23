@@ -8,7 +8,7 @@
 # 19/07/2020
 # Python 3.7.3
 # Windows 8
-"""."""
+"""Project script."""
 
 import argparse
 import json
@@ -16,8 +16,8 @@ import logging
 import logging.config
 import os
 
-from scripts.author_ident import AuthorIdent
-from scripts.author_model import AuthorModel
+from lib.author_ident import AuthorIdent
+from lib.author_model import AuthorModel
 
 
 LOG = logging.getLogger(__name__)
@@ -28,8 +28,9 @@ class LoggingErrorFilter(logging.Filter):
     def filter(self, record):
         return record.levelno != logging.ERROR
 
-def main():
-    # configure commandline parser
+
+def configure_parser():
+    """Define targets and overall commandline layout."""
     parser = argparse.ArgumentParser(
         description="Manages author profiles and performs authorship attribution.",
         epilog="Source files need to be preprocessed, "
@@ -48,21 +49,31 @@ def main():
     parser.add_argument('--test', help="Run all unittests.", action="store_true")
     parser.add_argument('--train', nargs=2, metavar=("author", "source"),
                         help="Add new class to classifier.")
-    parser.add_argument('--verbosity', type=int, choices=[0, 1, 2], default=1, 
+    parser.add_argument('--verbosity', type=int, choices=[0, 1, 2], default=1,
                         help="Adjust the amount of output (0=errors, 1=warnings and above,"
                              " 2=info and above). Default is 1.")
+    return parser
 
-    # parse commandline input
-    args = parser.parse_args()
 
-    # configure logging
+def configure_logging(verbosity):
+    """Create handlers and set levels for logging."""
     with open(os.path.join("data", "LogConfigDict.json"), "r") as fd:
         setting = json.load(fd)
         setting["filters"]["errorfilter"]["()"] = LoggingErrorFilter
-        setting["handlers"]["console"]["level"] = ["ERROR", "WARNING", "INFO"][args.verbosity]
+        setting["handlers"]["console"]["level"] = ["ERROR", "WARNING", "INFO"][verbosity]
         logging.config.dictConfig(setting)
-    
+
+
+def execute_commands(args):
+    """Access the addresses methods from AuthorModel and AuthorIdent."""
+    # test target
+    if args.test:
+        import tests
+        tests.main(args.verbosity)
+
     # action targets
+    if args.preprocess:
+        AuthorModel.preprocess(*args.preprocess)
     if args.catalog:
         classifier = AuthorIdent(*args.catalog)
     if args.classify:
@@ -83,18 +94,15 @@ def main():
             parser.error("--forget requires --catalog.")
         else:
             classifier.forget(*args.forget)
-    if args.preprocess:
-        AuthorModel.preprocess(*args.preprocess)
     if args.train:
         if not args.catalog:
             parser.error("--train requires --catalog.")
         else:
             classifier.train(*args.train)
 
-    # test target
-    if args.test:
-        import tests
-        tests.main(args.verbosity)
 
 if __name__ == "__main__":
-    main()
+    parser = configure_parser()
+    args = parser.parse_args()
+    configure_logging(args.verbosity)
+    execute_commands(args)
