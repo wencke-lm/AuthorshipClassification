@@ -20,9 +20,9 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize, sent_tokenize
 from tqdm import tqdm
 
-from scripts.distribution import Distribution, IntegerDistribution
-from scripts.mtld import mtld
-from scripts.errors import ScarceDataError, log_exception
+from lib.distribution import Distribution, IntegerDistribution
+from lib.mtld import mtld
+from lib.errors import ScarceDataError, log_exception
 
 
 LOG = logging.getLogger(__name__)  # module logger
@@ -43,6 +43,7 @@ class AuthorModel(dict):
         + distribution of word lengths
         + relative frequencies of POS-tag trigrams
         + relative frequencies of common tokens
+        + relative frequencies of punctuations
         + mtld score on token level
     """
 
@@ -71,10 +72,10 @@ class AuthorModel(dict):
             files = [os.path.join(source, fl) for fl in os.listdir(source)
                      if os.path.isfile(os.path.join(source, fl))]
             if files == []:
-                raise FileNotFoundError(f"method 'train' requires the directory to contain files")
+                raise FileNotFoundError(f"Method 'train' requires the directory to contain files.")
         else:
             LOG.info(f"current working directory: {os.getcwd()}")
-            raise FileNotFoundError(f"passed argument '{source}' matches no file or directory")
+            raise FileNotFoundError(f"Passed argument '{source}' matches no file or directory.")
         profile = AuthorModel()
         profile._extract_features(files)
         return profile
@@ -93,8 +94,8 @@ class AuthorModel(dict):
             AuthorModel: Loaded author profile.
         """
         if not os.path.isfile(source):
-            LOG.info(f"current working directory: {os.getcwd()}")
-            raise FileNotFoundError(f"passed argument '{source}' matches no file")
+            LOG.info(f"Current working directory: {os.getcwd()}")
+            raise FileNotFoundError(f"Passed argument '{source}' matches no file.")
 
         profile = AuthorModel()
         with open(source, 'r', encoding='utf-8') as file_in:
@@ -104,13 +105,13 @@ class AuthorModel(dict):
                     try:
                         value = float(line[1])
                     except ValueError:
-                        LOG.warning(f"ignored line {ln}; not-float value in second column")
-                        LOG.info(f"lines should have the format: <feature_name>\t<numeric_value>")
+                        LOG.warning(f"Ignored line {ln}; not-float value in second column.")
+                        LOG.info(f"Lines should have the format: <feature_name>\t<numeric_value>")
                     else:
                         profile[line[0]] = value
                 else:
-                    LOG.warning(f"ignored line {ln}; missing column")
-                    LOG.info(f"lines should have the format: <feature_name>\t<numeric_value>")
+                    LOG.warning(f"Ignored line {ln}; missing column.")
+                    LOG.info(f"Lines should have the format: <feature_name>\t<numeric_value>")
         return profile
 
     def write_csv(self, goal):
@@ -121,7 +122,7 @@ class AuthorModel(dict):
         Args:
             goal(str): Location/name for the file.
         """
-        with open(goal, 'w', encoding='utf-8', newline="") as file_out:
+        with open(goal, 'w', encoding='utf-8') as file_out:
             for ftr, freq in self.items():
                 file_out.write(f"{ftr}\t{freq}\n")
 
@@ -143,7 +144,7 @@ class AuthorModel(dict):
         LOG.info(f"Preprocessing '{source}'...")
         if os.path.isfile(source):
             with open(source, 'r', encoding='utf-8') as file_in, \
-                 open(goal, 'w', encoding='utf-8', newline="") as file_out:
+                 open(goal, 'w', encoding='utf-8') as file_out:
                 text = ''
                 for line in file_in:
                     text += line.rstrip() + ' '
@@ -153,13 +154,13 @@ class AuthorModel(dict):
                     file_out.write(' '.join(tokens) + '\n')
         elif os.path.isdir(source):
             if not os.path.isdir(goal):
-                os.mkdir(goal)
+                os.makedirs(goal)
             for fl in os.listdir(source):
                 if os.path.isfile(os.path.join(source, fl)):
                     cls.preprocess(os.path.join(source, fl), os.path.join(goal, fl))
         else:
-            LOG.info(f"current working directory: {os.getcwd()}")
-            raise FileNotFoundError(f"passed argument '{source}' matches no file or directory")
+            LOG.info(f"Current working directory: {os.getcwd()}")
+            raise FileNotFoundError(f"Passed argument '{source}' matches no file or directory.")
 
 #################
 # private methods
@@ -167,7 +168,8 @@ class AuthorModel(dict):
 
     @log_exception(LOG)
     def _extract_features(self, files):
-        """Build up feature vector"""
+        """Build up feature vector."""
+        # create relevant variables
         word_len_dist = IntegerDistribution()
         sent_len_dist = IntegerDistribution()
         trigram_dist = Distribution()  # POS-tag trigrams
@@ -175,11 +177,12 @@ class AuthorModel(dict):
         punctuation_dist = Distribution()
         acc_mtld = 0
 
+        # fill variables
         for fl in tqdm(files):
             try:
                 acc_mtld += mtld(self._get_words(fl))
             except ScarceDataError as e:
-                raise ScarceDataError(f"file '{fl}' not appropriate for training") from e
+                raise ScarceDataError(f"File '{fl}' not appropriate for training.") from e
             collect = []
             for sent in self._nlp(fl):
                 sent_len_dist.inc(len(sent))
@@ -199,15 +202,14 @@ class AuthorModel(dict):
 
         # word_len_dist, freq_word_dist are checked implicitely via trigram_dist
         if (sent_len_dist.total() < 2 or trigram_dist.total() < 1 or punctuation_dist.total() < 1):
-            LOG.info(f"at least two sentences, three consecutive words and one punctuation mark "
-                     "have to be included in the data")
-            raise ScarceDataError(f"not enough input data")
-
+            LOG.info("At least two sentences, three consecutive words and one "
+                     "punctuation mark have to be included in the data.")
+            raise ScarceDataError(f"Not enough input data.")
+        # normalize and push to the feature vector
         self.update({f"<w{key}>": value for key, value in word_len_dist.prob_dist().items()})
         self["<mean_word_len>"] = word_len_dist.mean()
         self["<stdev_word_len>"] = word_len_dist.stdev(m=self["<mean_word_len>"])
         self.update({f"<s{key}>": value for key, value in sent_len_dist.prob_dist().items()})
-        freq_word_dist.plot("oh my",[])
         self["<mean_sent_len>"] = sent_len_dist.mean()
         self["<stdev_sent_len>"] = sent_len_dist.stdev(m=self["<mean_sent_len>"])
         self.update(trigram_dist.prob_dist())

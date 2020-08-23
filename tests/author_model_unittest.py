@@ -10,21 +10,16 @@
 # Windows 8
 """author_model.py testcases."""
 
-import filecmp
 import logging
 import os
 import re
-import sys
 import unittest
 
-root_dir = os.path.dirname(os.path.dirname(__file__))
-os.chdir(root_dir)
-sys.path.append(root_dir)
-
-from scripts.author_model import AuthorModel, LOG
-from scripts.errors import ScarceDataError
+from lib.author_model import AuthorModel, LOG
+from lib.errors import ScarceDataError
 
 LOG.setLevel(logging.CRITICAL)
+
 
 class IOInteractionTestCase(unittest.TestCase):
     def test_training_on_directory_without_files(self):
@@ -34,8 +29,8 @@ class IOInteractionTestCase(unittest.TestCase):
     def test_logs_for_reading_in_corrupted_csv_file(self):
         with self.assertLogs(LOG, level='WARNING') as logger:
             AuthorModel.read_csv(os.path.join("tests", "data", "corrupted_file.csv"))
-        msg1 = "WARNING:scripts.author_model:ignored line 3; missing column"
-        msg2 = "WARNING:scripts.author_model:ignored line 5; not-float value in second column"
+        msg1 = "WARNING:lib.author_model:ignored line 3; missing column"
+        msg2 = "WARNING:lib.author_model:ignored line 5; not-float value in second column"
         # two asserts but actually only one assertion that logging works as expected
         self.assertIn(msg1, logger.output)
         self.assertIn(msg2, logger.output)
@@ -54,8 +49,10 @@ class IOInteractionTestCase(unittest.TestCase):
             org = os.path.join("tests", "data", "preprocessed_data", fl)
             new = os.path.join("tests", "data", "temp", fl)
             if os.path.isfile(new):
-                if not filecmp.cmp(org, new, shallow=False):
-                    result = False
+                with open(org, 'r', encoding='utf-8') as org_file:
+                    with open(new, 'r', encoding='utf-8') as new_file:
+                        if org_file.read() != new_file.read():
+                            result = False
                 os.remove(new)
             else:
                 result = False
@@ -113,7 +110,3 @@ class FeatureExtractionDirectoryTestCase(unittest.TestCase):
                          for key in self.model
                          if re.match(r"\[.*\]$", key)]
         self.assertAlmostEqual(sum(trigram_freqs), 1, places=4)
-
-
-if __name__ == "__main__":
-    unittest.main()

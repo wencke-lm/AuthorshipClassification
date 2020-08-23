@@ -13,7 +13,7 @@
 import logging
 import types
 
-from scripts.errors import ScarceDataError
+from lib.errors import ScarceDataError
 
 
 LOG = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def _mtld(seq, ttr_threshold=0.72, reverse=False):
     if seg_count == 0:  # if there was only a single occurence of every word
         raise ScarceDataError("Can't calculate MTLD score of a sequence with no repeating words.")
     if seq_len < 100:
-        LOG.warning("MTLD scores for sequences shorter than 100 words are not reliable.")
+        LOG.warning("MTLD scores for sequences shorter than 200 words are not reliable.")
     return seq_len/seg_count
 
 

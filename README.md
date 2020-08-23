@@ -5,15 +5,28 @@ The Python version used on both operating systems was 3.7.3.
 main.py - a program managing a collection of author profiles, based on which classification for texts of (supposedly) unknown authorship can be performed
 
 ## Description
-Given a set of candidate authors, text samples of known authorship covering all the candidate authors(=training corpus)
-and text samples of (supposedly) unknown authorship (=test corpus), authorship attribution describes the problem of deducing
+Given a set of candidate authors, text samples of known authorship covering all the candidate authors(= training corpus)
+and text samples of (supposedly) unknown authorship (= test corpus), authorship attribution describes the problem of deducing
 an author proﬁle from the former to be used in attributing a candidate author to each of the later (Stamatatos, 2009).
-The first step of deducing profiles is done by the class AuthorIdent and the second step of attributing a candidate author
-based on these profiles is done by the class AuthorModel. Those two classes are the main pillars of the project.
+The first step of deducing profiles is done by the class *AuthorModel* and the second step of attributing a candidate author
+based on these profiles is done by the class *AuthorIdent*. *AuthorModel* is a subclass of *dict* and its instances can be understood as feature vectors.
+The **nltk** library was used to perform the natural language processing necessary for the subsequent feature extraction and mainly visible in the 
+function *AuthorModel._nlp* where tokens are enriched with e.g. information about their POS-Tag and lemma, before they are finally returned as **namedtuple**s 
+in blocks of complete sentences. Feature extration and normalization is performed in the Function *AuthorModel.__extract_features*.
+The User interface to those methods is the function *AuthorModel.train*. Furthermore the functions *AuthorModel.write_csv* and *AuthorModel.read_csv* offer
+the possibility of respectively saving and loading trained feature vectors.  
+The class *AuthorIdent* can be seen as a feature vector or profile management system, providing several services to the user including adding (*AuthorIdent.train*)
+and deleting (*AuthorIdent.forget*) profiles as well as performing the classification task (*AuthorIdent.classify*) based on the added profiles.
+While those two classes are the main pillars of the project, another module *mtld.py* includes an implementation of the vocabulary richness score MTLD chosen because
+it is said to be the measure most immune to varying text lengths a characteristic deemed important for the chosen data set.
+*distributions.py* includes subclasses of **Counter**. They are used for normalizing counts and have been used to produce visualizations of the data
+with **matplotlib** and **numpy**, but this functionality is not directly accessible in the framework of the project.
+
+Other modules used are **tqdm** and from the standard library **functools**, **logging**, **os**, **sys**, **types**.
 
 ## Requirements
 The following steps are necessary for initializing the project environment:
-+  Create and activate Virtual Environment (recommended)
++ Create and activate Virtual Environment (recommended)
   On Windows:
    ```sh
    $ python -m venv env
@@ -24,14 +37,23 @@ The following steps are necessary for initializing the project environment:
    $ python3 -m venv env
    $ env/bin/activate
    ```
-+ Install dependencies
++ Install dependencies (replace *python* with *python3* on Linux):
   ```sh
-   $ pip install -r requirements.txt
+   $ python -m pip install -r requirements.txt
+   ```
++ Download NLTK data (replace *python* with *python3* on Linux):
+  ```sh
+   $ python -m nltk.downloader punkt
+   $ python -m nltk.downloader averaged_perceptron_tagger
+   $ python -m nltk.downloader wordnet
    ```
 + Download the [Gutenberg Dataset](https://web.eecs.umich.edu/~lahiri/gutenberg_dataset.html) .
-+ Unzip *Gutenberg.zip* to the root directory of the project.
-+ Execute the script .... bla from the root directory (**execution time: ~15min**).
-+ 
++ Unzip *Gutenberg.zip*.
++ Execute the following command from the root directory (**execution time: ~15min**)(replace *python* with *python3* on Linux):
+  ```sh
+   $ python scripts/split_data.py PATH_TO_UNZIPPED_GUTENBERG
+   ```
+
 
 ## Synopsis
 Enter a command following the scheme below in order to:
