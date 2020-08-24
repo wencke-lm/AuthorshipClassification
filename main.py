@@ -15,6 +15,7 @@ import json
 import logging
 import logging.config
 import os
+import sys
 
 from lib.author_ident import AuthorIdent
 from lib.author_model import AuthorModel
@@ -44,7 +45,7 @@ def configure_parser():
                         help="Delete a catalog and its content.")
     parser.add_argument('--forget', nargs=1, metavar="author",
                         help="Delete class from classifier.")
-    parser.add_argument('--preprocess', nargs=1, metavar="filename",
+    parser.add_argument('--preprocess', nargs=2, metavar=("filename", "goal"),
                         help="Preprocess a raw txt-file.")
     parser.add_argument('--test', help="Run all unittests.", action="store_true")
     parser.add_argument('--train', nargs=2, metavar=("author", "source"),
@@ -106,3 +107,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     configure_logging(args.verbosity)
     execute_commands(args)
+    if len(sys.argv) == 1:
+        parser.print_help()
