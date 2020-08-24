@@ -137,6 +137,7 @@ class AuthorIdent:
         best_match = (float("inf"), None)
         for known_author, known_author_pr in self.profiles.items():
             diff = self._simil(known_author_pr, unknown_author_pr)
+            LOG.info(f"Difference score with '{known_author}': {diff}")
             if diff < best_match[0]:
                 best_match = (diff, known_author)
         return best_match[1]
@@ -205,13 +206,13 @@ class AuthorIdent:
     @staticmethod
     def _simil(known_author, unknown_author):
         """Calculate similarity of two author profiles."""
-        weights = {"<mean_word_len>": 0.05, "<stdev_word_len>": 0.05, "<mean_sent_len>": 0.005,
-                   "<stdev_sent_len>": 0.005, "<mtld_score>": 0.01}
+        weights = {"<mean_word_len>": 0.05, "<stdev_word_len>": 0.05,
+                   "<mean_sent_len>": 0.005, "<stdev_sent_len>": 0.005,
+                   "<mtld_score>": 0.01}
         diff = 0
         for feature_kn, value in known_author.items():
-            diff += abs(value - unknown_author.get(feature_kn, 0))*weights.get(feature_kn, 1)
+            diff += abs(value-unknown_author.get(feature_kn, 0)) * weights.get(feature_kn, 1)
         for feature_unk, value in unknown_author.items():
             if feature_unk not in known_author:
                 diff += abs(-value)*weights.get(feature_unk, 1)
-        print(diff)
         return diff

@@ -32,9 +32,9 @@ class LoggingErrorFilter(logging.Filter):
 def configure_parser():
     """Define targets and overall commandline layout."""
     parser = argparse.ArgumentParser(
-        description="Manages author profiles and performs authorship attribution.",
-        epilog="Source files need to be preprocessed, "
-               "containing one sentence per line and a space between tokens.")
+        description="Manage author profiles and perform authorship attribution.",
+        epilog="Source files need to be preprocessed, containing "
+               "one sentence per line and a space between tokens.")
     parser.add_argument('--catalog', nargs=1, metavar="catalog",
                         help="Path to a file containing lines of the form "
                              r"<author>\t<pretrained model csv-filename> .")
@@ -50,8 +50,8 @@ def configure_parser():
     parser.add_argument('--train', nargs=2, metavar=("author", "source"),
                         help="Add new class to classifier.")
     parser.add_argument('--verbosity', type=int, choices=[0, 1, 2], default=1,
-                        help="Adjust the amount of output (0=errors, 1=warnings and above,"
-                             " 2=info and above). Default is 1.")
+                        help="Adjust the amount of output (0=errors, 1=warnings "
+                             "and above, 2=info and above). Default is 1.")
     return parser
 
 

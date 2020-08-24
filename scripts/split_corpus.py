@@ -16,8 +16,8 @@ import sys
 from tqdm import tqdm
 
 # in order to acces module from sister directory
-root_dir = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(root_dir)
+ROOT = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(ROOT)
 
 from lib.author_model import AuthorModel
 
@@ -35,9 +35,9 @@ def opt_slice(array, goal):
     best_slice = (float("inf"), None, None)
     for start in range(len(array)):
         for end in range(start, len(array)):
-            diff = abs(sum(array[start:end+1]) - goal)
+            diff = abs(sum(array[start:end + 1]) - goal)
             if diff < best_slice[0]:
-                best_slice = (diff, start, end+1)
+                best_slice = (diff, start, end + 1)
     return best_slice[1:]
 
 
@@ -65,12 +65,15 @@ def preprocess_gutenberg(source):
         val = opt_slice(sizes, sum(sizes)*0.1)
         # books included in the validation set can not be included in the test set
         # their size is set to zero for them not to be used to get any closer to goal value
-        test = opt_slice(sizes[:val[0]] + [0]*(val[1] - val[0]) + sizes[val[1]:], sum(sizes)*0.2)
+        test = opt_slice(
+            sizes[:val[0]] + [0]*(val[1]-val[0]) + sizes[val[1]:],
+            sum(sizes)*0.2
+        )
         for i, book in enumerate(tqdm(books, leave=False)):
             if i in range(*val):
                 pass
                 # AuthorModel.preprocess(os.path.join(source, "txt", book),
-                                       # os.path.join("corpus", "validation", author, book))
+                #                        os.path.join("corpus", "validation", author, book))
             elif i in range(*test):
                 AuthorModel.preprocess(os.path.join(source, "txt", books[i]),
                                        os.path.join("corpus", "test", author, book))
@@ -80,7 +83,7 @@ def preprocess_gutenberg(source):
 
 
 if __name__ == "__main__":
-    if os.path.isdir("corpuss"):
+    if os.path.isdir("corpus"):
         print("The preprocessed splitted corpus is already available.")
     else:
         if len(sys.argv) < 2:

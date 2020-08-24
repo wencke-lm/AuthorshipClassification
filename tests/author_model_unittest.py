@@ -29,8 +29,8 @@ class IOInteractionTestCase(unittest.TestCase):
     def test_logs_for_reading_in_corrupted_csv_file(self):
         with self.assertLogs(LOG, level='WARNING') as logger:
             AuthorModel.read_csv(os.path.join("tests", "data", "corrupted_file.csv"))
-        msg1 = "WARNING:lib.author_model:ignored line 3; missing column"
-        msg2 = "WARNING:lib.author_model:ignored line 5; not-float value in second column"
+        msg1 = "WARNING:lib.author_model:Ignored line 3; missing column."
+        msg2 = "WARNING:lib.author_model:Ignored line 5; not-float value in second column."
         # two asserts but actually only one assertion that logging works as expected
         self.assertIn(msg1, logger.output)
         self.assertIn(msg2, logger.output)
