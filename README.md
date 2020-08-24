@@ -75,7 +75,7 @@ Enter a command following the scheme below in order to:
    ```
 + Preprocess a file to make it admittable as a SOURCE argument:
     ```sh
-   python main.py --preprocess FILENAME
+   python main.py --preprocess FILENAME GOAL
    ```
 + Run all unittests.
     ```sh
@@ -95,11 +95,14 @@ Otherwise problems involving the relative paths to the profiles saved in it will
     + Utf-8 encoded raw txt-file.
 + SOURCE
     + Utf-8 encoded preprocessed txt-file where tokens are separated with whitespaces and each sentence is on its separate line.
++ GOAL
+    + Location to save the resulting preprocessed file at.
 
 ## Examples
 + `python main.py --catalog data/gutenbergident.txt --train  "Anthony Trollope" "corpus/training/Anthony Trollope"`
 + `python main.py --catalog data/gutenbergident.txt --forget "Anthony Trollope"`
 + `python main.py --catalog data/gutenbergident.txt --classify "corpus/test/Anthony Trollope/Anthony Trollope___A Ride Across Palestine"`
++ `python main.py --preprocess "Aldous Huxley___Mortal Coils.txt" "Aldous Huxley___Mortal Coils.pre"`
 
 ## Author
 Wencke Liermann  

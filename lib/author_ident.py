@@ -187,21 +187,29 @@ class AuthorIdent:
                 for ln, line in enumerate(file_in, 1):
                     line = line.rstrip().split('\t')
                     if len(line) == 2:
+                        author, file = line
                         try:
-                            profile = AuthorModel.read_csv(line[1])
+                            profile = AuthorModel.read_csv(file)
                         except FileNotFoundError:
                             LOG.warning(f"Ignored line {ln}; could not open the file "
-                                        f"'{line[1]}' supposed to contain the pretrained model.")
+                                        f"'{file}' supposed to contain the pretrained model.")
                         else:
-                            self.profiles[line[0]] = profile
-                            self.catalog_content[line[0]] = line[1]
+                            LOG.info(f"Trained for '{author}'.")
+                            self.profiles[author] = profile
+                            self.catalog_content[author] = file
                     else:
                         LOG.warning(f"Ignored line {ln}; missing column.")
                         LOG.info(f"Correct line format: <author_name>\t<saved_profile_file> .")
         else:
-            LOG.info(f"Create new classifier with the catalog '{catalog}'...")
-            with open(catalog, 'w', encoding='utf-8'):
-                pass
+            answer = None
+            while answer not in ['y', 'n']:
+                answer = input("Catalog not found. Do you want to create the catalog? y/n\n")
+                if answer == 'y':
+                    LOG.info(f"Create new classifier with the catalog '{catalog}'...")
+                    with open(catalog, 'w', encoding='utf-8'):
+                        pass
+                elif answer == 'n':
+                    return
 
     @staticmethod
     def _simil(known_author, unknown_author):
