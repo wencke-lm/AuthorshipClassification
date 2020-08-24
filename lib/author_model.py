@@ -74,7 +74,7 @@ class AuthorModel(dict):
             if files == []:
                 raise FileNotFoundError(f"Method 'train' requires the directory to contain files.")
         else:
-            LOG.info(f"current working directory: {os.getcwd()}")
+            LOG.info(f"Current working directory: {os.getcwd()}")
             raise FileNotFoundError(f"Passed argument '{source}' matches no file or directory.")
         profile = AuthorModel()
         profile._extract_features(files)
@@ -202,9 +202,10 @@ class AuthorModel(dict):
 
         # word_len_dist, freq_word_dist are checked implicitely via trigram_dist
         if (sent_len_dist.total() < 2 or trigram_dist.total() < 1 or punctuation_dist.total() < 1):
-            LOG.info("At least two sentences, three consecutive words and one "
-                     "punctuation mark have to be included in the data.")
-            raise ScarceDataError(f"Not enough input data.")
+            raise ScarceDataError("Not enough input data.\n"
+                                  "At least two sentences, three consecutive words and\n"
+                                  "one punctuation mark ('.', ';', ',', '?', '!')\n"
+                                  "have to be included in the data.")
         # normalize and push to the feature vector
         self.update({f"<w{key}>": value for key, value in word_len_dist.prob_dist().items()})
         self["<mean_word_len>"] = word_len_dist.mean()
@@ -227,8 +228,9 @@ class AuthorModel(dict):
 
     @staticmethod
     def _nlp(filename):
-        """Yields the sentences of a file one at a time and
-           as a sequence of tokens with additional information.
+        """
+        Yields the sentences of a file one at a time and
+        as a sequence of tokens with additional information.
         """
         # read in frequent words of interest
         with open(FREQ_WRDS, 'r', encoding='utf-8') as file_in:
