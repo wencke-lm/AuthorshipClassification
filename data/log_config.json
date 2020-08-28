@@ -28,7 +28,7 @@
             "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "filef",
-            "filename": "data/project_log.log",
+            "filename": "data/project.log",
             "mode": "a",
             "encoding": "utf-8"
         }

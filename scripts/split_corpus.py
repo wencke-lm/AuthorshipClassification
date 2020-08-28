@@ -5,27 +5,31 @@
 # Bachelor Computerlinguistik
 # 4. Semester
 
-# 20/08/2020
+# 28/08/2020
 # Python 3.7.3
 # Windows 8
 """Split and preprocess the Gutenberg corpus content."""
 
+import json
+import logging
 import os
 import sys
 
 from tqdm import tqdm
 
-# in order to acces module from sister directory
-ROOT = os.path.dirname(os.path.dirname(__file__))
+# in order to access module from sister directory
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT)
 
 from lib.author_model import AuthorModel
 
 
-AUTHORS = ["Anthony Trollope", "Charles Dickens", "Charlotte Mary Yonge",
-           "George Alfred Henty", "Henry Rider Haggard",
-           "James Fenimore Cooper", "R M Ballantyne", "Robert Louis Stevenson",
-           "Sir Walter Scott", "William Dean Howells"]
+LOG = logging.getLogger(__name__)
+LOG.setLevel("INFO")
+LOG.addHandler(logging.StreamHandler())
+
+with open(os.path.join(ROOT, "data", "author_config.json"), 'r', encoding='utf-8') as file_in:
+    AUTHORS = json.load(file_in)
 
 
 # function to minimize: difference between sum of subset and goal value
@@ -50,13 +54,16 @@ def preprocess_gutenberg(source):
     os.mkdir(os.path.join("corpus", "training"))
     # os.mkdir(os.path.join("corpus", "validation"))
 
-    # create mapping of each author to its books
-    data = {key: [] for key in AUTHORS}
-    for fl in os.listdir(os.path.join(source, "txt")):
-        author, title = fl.split("___")
+    # create mapping of each author to their books
+    data = {author: [] for author in AUTHORS}
+    for filename in os.listdir(os.path.join(source, "txt")):
+        author, *title = filename.split("___")
         if author in data:
-            data[author].append(fl)
+            data[author].append(filename)
     for author in tqdm(data):
+        if len(data[author]) < 3:
+            LOG.warning(f"\n'{author}' skipped. Make sure to include at least 3 books per author.")
+            continue
         os.mkdir(os.path.join("corpus", "test", author))
         os.mkdir(os.path.join("corpus", "training", author))
         # os.mkdir(os.path.join("corpus", "validation", author))
@@ -84,12 +91,13 @@ def preprocess_gutenberg(source):
 
 if __name__ == "__main__":
     if os.path.isdir("corpus"):
-        print("The preprocessed splitted corpus is already available.")
+        LOG.error("The preprocessed splitted corpus is already available.")
+        LOG.info("Delete the folder 'corpus' or rename it to start over.")
     else:
         if len(sys.argv) < 2:
-            print("Please pass the path to your unzipped Gutenberg folder.\n")
-            print("Synopsis:")
-            print("$ python scripts/split_data.py PATH_TO_UNZIPPED_GUTENBERG")
+            LOG.error("Please pass the path to your unzipped Gutenberg folder.\n")
+            LOG.info("Synopsis:")
+            LOG.info("$ python scripts\\split_corpus.py PATH_TO_UNZIPPED_GUTENBERG")
         else:
             if os.path.isdir(sys.argv[1]):
                 preprocess_gutenberg(sys.argv[1])

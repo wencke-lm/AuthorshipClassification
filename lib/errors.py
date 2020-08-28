@@ -4,7 +4,7 @@
 # Universität Potsdam
 # Bachelor Computerlinguistik
 
-# 21/07/2020
+# 28/08/2020
 # Python 3.7.3
 # Windows 8
 """Exception related decorators and classes."""
@@ -33,12 +33,12 @@ def log_exception(logger):
     def _log(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            pos_args = [repr(a) for a in args]
-            key_args = [f"{n}={a!r}" for n, a in kwargs.items()]
-            msg = f"Calling {func.__name__}({', '.join(pos_args + key_args)})..."
             try:
                 value = func(*args, **kwargs)
             except:
+                pos_args = [repr(a) for a in args]
+                key_args = [f"{n}={a!r}" for n, a in kwargs.items()]
+                msg = f"Calling {func.__name__}({', '.join(pos_args + key_args)})..."
                 logger.error(msg, exc_info=True)
                 raise
             else:

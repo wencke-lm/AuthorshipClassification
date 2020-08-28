@@ -5,7 +5,7 @@
 # Bachelor Computerlinguistik
 # 4. Semester
 
-# 19/08/2020
+# 28/08/2020
 # Python 3.7.3
 # Windows 8
 """Classifier for feature-based authorship attribution."""
@@ -60,7 +60,7 @@ class AuthorIdent:
         self.catalog_content = dict()
         self.profiles = dict()
 
-        self._read_catalog(catalog)
+        self._read_catalog()
 
     @log_exception(LOG)
     def train(self, author, source):
@@ -82,15 +82,15 @@ class AuthorIdent:
         profile = AuthorModel.train(source)
         self.profiles[author] = profile
         filepath = os.path.join(os.path.dirname(self.catalog), author)
-        if os.path.isfile(filepath + ".csv"):
+        if os.path.isfile(filepath + ".json"):
             i = 2
-            while os.path.isfile(filepath + f"({i}).csv"):
+            while os.path.isfile(filepath + f"({i}).json"):
                 i += 1
             filepath = filepath + f"({i})"
-        profile.write_csv(filepath + ".csv")
+        profile.write_json(filepath + ".json")
         with open(self.catalog, 'a', encoding='utf-8') as file_out:
-            file_out.write(f"{author}\t{filepath +'.csv'}\n")
-        self.catalog_content[author] = filepath + ".csv"
+            file_out.write(f"{author}\t{filepath +'.json'}\n")
+        self.catalog_content[author] = filepath + ".json"
 
     @log_exception(LOG)
     def forget(self, author):
@@ -113,8 +113,8 @@ class AuthorIdent:
             LOG.warning(f"The pretrained model '{saved_model}' "
                         "of the deleted author couldn't be removed.")
         with open(self.catalog, 'w', encoding='utf-8') as file_out:
-            for author, profile in self.catalog_content.items():
-                file_out.write(f"{author}\t{profile}\n")
+            for author_name, profile in self.catalog_content.items():
+                file_out.write(f"{author_name}\t{profile}\n")
 
     @log_exception(LOG)
     def classify(self, source):
@@ -128,7 +128,7 @@ class AuthorIdent:
                 <AuthorModel.preprocess> to perform this preprocessing.
 
         Returns:
-            str: Most likely author for the text.
+            str: Author match based on minimal distance to profiles.
         """
         if len(self.catalog_content) < 2:
             raise CatalogError(f"'{self.catalog}' is trained for less than two authors.")
@@ -136,7 +136,8 @@ class AuthorIdent:
         unknown_author_pr = AuthorModel.train(source)
         best_match = (float("inf"), None)
         for known_author, known_author_pr in self.profiles.items():
-            diff = self._simil(known_author_pr, unknown_author_pr)
+            diff = self._simil(known_author_pr.normalized_feature_vector(),
+                               unknown_author_pr.normalized_feature_vector())
             LOG.info(f"Difference score with '{known_author}': {diff}")
             if diff < best_match[0]:
                 best_match = (diff, known_author)
@@ -153,7 +154,7 @@ class AuthorIdent:
 
         Returns:
             float: Number of correctly annotated texts divided by the
-                number of texts inputed.
+                total number of texts.
         """
         if input_vec == []:
             raise ValueError("Accuracy of an empty test set can't be calculated.")
@@ -179,17 +180,18 @@ class AuthorIdent:
 # private methods
 #################
 
-    def _read_catalog(self, catalog):
+    @log_exception(LOG)
+    def _read_catalog(self):
         """Load saved classifier."""
-        if os.path.isfile(catalog):
-            LOG.info(f"Load existing classifier with the catalog '{catalog}'...")
-            with open(catalog, 'r', encoding='utf-8') as file_in:
+        if os.path.isfile(self.catalog):
+            LOG.info(f"Load existing classifier with the catalog '{self.catalog}'...")
+            with open(self.catalog, 'r', encoding='utf-8') as file_in:
                 for ln, line in enumerate(file_in, 1):
                     line = line.rstrip().split('\t')
                     if len(line) == 2:
                         author, file = line
                         try:
-                            profile = AuthorModel.read_csv(file)
+                            profile = AuthorModel.read_json(file)
                         except FileNotFoundError:
                             LOG.warning(f"Ignored line {ln}; could not open the file "
                                         f"'{file}' supposed to contain the pretrained model.")
@@ -201,15 +203,7 @@ class AuthorIdent:
                         LOG.warning(f"Ignored line {ln}; missing column.")
                         LOG.info(f"Correct line format: <author_name>\t<saved_profile_file> .")
         else:
-            answer = None
-            while answer not in ['y', 'n']:
-                answer = input("Catalog not found. Do you want to create the catalog? y/n\n")
-                if answer == 'y':
-                    LOG.info(f"Create new classifier with the catalog '{catalog}'...")
-                    with open(catalog, 'w', encoding='utf-8'):
-                        pass
-                elif answer == 'n':
-                    return
+            raise FileNotFoundError(f"The catalog '{self.catalog}' does not exist.")
 
     @staticmethod
     def _simil(known_author, unknown_author):
@@ -222,5 +216,5 @@ class AuthorIdent:
             diff += abs(value-unknown_author.get(feature_kn, 0)) * weights.get(feature_kn, 1)
         for feature_unk, value in unknown_author.items():
             if feature_unk not in known_author:
-                diff += abs(-value)*weights.get(feature_unk, 1)
+                diff += value*weights.get(feature_unk, 1)
         return diff
