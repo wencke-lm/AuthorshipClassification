@@ -5,7 +5,7 @@
 # Bachelor Computerlinguistik
 # 4. Semester
 
-# 19/07/2020
+# 28/08/2020
 # Python 3.7.3
 # Windows 8
 """Project script."""
@@ -36,19 +36,19 @@ def configure_parser():
         description="Manage author profiles and perform authorship attribution.",
         epilog="Source files need to be preprocessed, containing "
                "one sentence per line and a space between tokens.")
-    parser.add_argument('--catalog', nargs=1, metavar="catalog",
+    parser.add_argument('--catalog', nargs=1, metavar="CATALOG",
                         help="Path to a file containing lines of the form "
                              r"<author>\t<pretrained model csv-filename> .")
-    parser.add_argument('--classify', nargs=1, metavar="source",
+    parser.add_argument('--classify', nargs=1, metavar="SOURCE",
                         help="Return the most likely author for the given text.")
     parser.add_argument("--destroy", action="store_true",
                         help="Delete a catalog and its content.")
-    parser.add_argument('--forget', nargs=1, metavar="author",
+    parser.add_argument('--forget', nargs=1, metavar="AUTHOR",
                         help="Delete class from classifier.")
-    parser.add_argument('--preprocess', nargs=2, metavar=("filename", "goal"),
+    parser.add_argument('--preprocess', nargs=2, metavar=("FILENAME", "GOAL"),
                         help="Preprocess a raw txt-file.")
     parser.add_argument('--test', help="Run all unittests.", action="store_true")
-    parser.add_argument('--train', nargs=2, metavar=("author", "source"),
+    parser.add_argument('--train', nargs=2, metavar=("AUTHOR", "SOURCE"),
                         help="Add new class to classifier.")
     parser.add_argument('--verbosity', type=int, choices=[0, 1, 2], default=1,
                         help="Adjust the amount of output (0=errors, 1=warnings "
@@ -58,7 +58,7 @@ def configure_parser():
 
 def configure_logging(verbosity):
     """Create handlers and set levels for logging."""
-    with open(os.path.join("data", "LogConfigDict.json"), "r") as fd:
+    with open(os.path.join("data", "log_config.json"), "r", encoding='utf-8') as fd:
         setting = json.load(fd)
         setting["filters"]["errorfilter"]["()"] = LoggingErrorFilter
         setting["handlers"]["console"]["level"] = ["ERROR", "WARNING", "INFO"][verbosity]
@@ -66,7 +66,7 @@ def configure_logging(verbosity):
 
 
 def execute_commands(args):
-    """Access the addresses methods from AuthorModel and AuthorIdent."""
+    """Access the addressed methods from AuthorModel and AuthorIdent."""
     # test target
     if args.test:
         import tests
@@ -76,7 +76,18 @@ def execute_commands(args):
     if args.preprocess:
         AuthorModel.preprocess(*args.preprocess)
     if args.catalog:
-        classifier = AuthorIdent(*args.catalog)
+        try:
+            classifier = AuthorIdent(*args.catalog)
+        except FileNotFoundError:
+            answer = None
+            while answer not in {'y', 'n'}:
+                answer = input("Catalog not found. Do you want to create the catalog? y/n\n")
+                if answer == 'y':
+                    LOG.info(f"Create new classifier with the catalog '{args.catalog[0]}'...")
+                    with open(*args.catalog, 'w', encoding='utf-8'):
+                        pass
+                elif answer == 'n':
+                    return
     if args.classify:
         if not args.catalog:
             parser.error("--classify requires --catalog.")
@@ -104,8 +115,9 @@ def execute_commands(args):
 
 if __name__ == "__main__":
     parser = configure_parser()
-    args = parser.parse_args()
-    configure_logging(args.verbosity)
-    execute_commands(args)
     if len(sys.argv) == 1:
         parser.print_help()
+    else:
+        args = parser.parse_args()
+        configure_logging(args.verbosity)
+        execute_commands(args)

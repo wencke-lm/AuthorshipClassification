@@ -5,12 +5,12 @@
 # Bachelor Computerlinguistik
 # 4. Semester
 
-# 19/08/2020
+# 28/08/2020
 # Python 3.7.3
 # Windows 8
-"""Counter subclasses for distribution."""
+"""MutableMappings for frequency distributions."""
 
-from collections import Counter
+from collections.abc import MutableMapping, Mapping, Iterable
 import logging
 
 import matplotlib.pyplot as plt
@@ -22,55 +22,59 @@ from lib.errors import ScarceDataError, log_exception
 LOG = logging.getLogger(__name__)  # module logger
 
 
-class Distribution(Counter):
-    """Subclass of collections.Counter.
+class Distribution(MutableMapping):
+    """A frequency distribution to record event outcomes.
 
-    Exhibits the same behaviour as its parent class but
-    offers additional functionality for normalizing counts.
+    A distribution maps events to the number of times they have
+    been observed. It is similar to a dictionary but in so far
+    different that values may only be of type integer.
 
     Args:
-        iterable: When given, initialize with its items.
+        iterable(Optional[Iterable]): When given,
+            initialize the distribution with its items.
 
     Attributes:
+        _distr(dict): The mapping.
         _total(int): Total number of items in the distribution.
     """
-    def __init__(self, iterable=''):
+    def __init__(self, iterable=None):
+        self._distr = dict()
         self._total = 0
 
-        for item in iterable:
-            self.inc(item)
+        if iterable is not None:
+            self.update(iterable)
 
-    def inc(self, item):
-        """Add one observation.
+    @property
+    def distr(self):
+        """Return the recorded distribution as a dictionary."""
+        return self._distr
 
-        Args:
-            item(hashable type): Data point to be added.
+    @property
+    def total(self):
         """
-        self[item] += 1
-        self._total += 1
+        Return the total number of observations that have been
+        recorded by this distribution.
+        """
+        return self._total
 
     @log_exception(LOG)
     def prob_dist(self, iterable=None):
         """Calculate probability distribution over all observations.
 
         Args:
-            iterable: Specify to only include a subset.
+            iterable: Specify to only calculate the probability
+                for a subset of observations, normalization
+                is still performed with the total number
+                of observations in the whole distribution.
 
         Returns:
             dict: Dict with normalized counts.
         """
         if self._total < 1:
-            raise ScarceDataError("Method 'prob_dist' needs atleast one data point.")
+            raise ScarceDataError("Method 'prob_dist' needs at least one data point.")
         if iterable is None:
             iterable = self.keys()
         return {k: self[k]/self._total for k in iterable}
-
-    def total(self):
-        """
-        Return the total number of observations that have been
-        recorded by this Distribution.
-        """
-        return self._total
 
     @log_exception(LOG)
     def plot(self, title, iterable=None):
@@ -81,13 +85,13 @@ class Distribution(Counter):
 
         Args:
             title(str): Title to be displayed over the chart.
-            iterable: Specify to only include a subset of items.
-                If not specified all items are plotted.
+            iterable(Optional[]): Specify to only include a subset
+                of observations. If not specified all are plotted.
         """
         if not iterable:
             iterable = self.keys()
             if not iterable:
-                raise ScarceDataError("Method 'plot' needs atleast one data point.")
+                raise ScarceDataError("Method 'plot' needs at least one data point.")
         else:
             # because we need to iterate more than once
             if iter(iterable) is iterable:
@@ -104,25 +108,72 @@ class Distribution(Counter):
                 break
         # plot settings
         fig, ax = plt.subplots()
-        ax.pie(sizes, labels=["{:.2%}".format(v) for v in sizes], shadow=False, startangle=90)
+        ax.pie(sizes, labels=["{:.2%}".format(size) for size in sizes],
+               shadow=False, startangle=90)
         ax.axis('equal')
         plt.title(title)
         plt.legend(slices, loc=3)
         plt.show()
 
+    @log_exception(LOG)
+    def update(self, iterable):
+        if isinstance(iterable, Mapping):
+            if any(map(lambda x: not isinstance(x, int) or x < 0, iterable.values())):
+                raise TypeError("Values of Distribution need to be positive integers.")
+            # called after initialization
+            if self._distr:
+                self_get = self.get
+                for obsv, times in iterable.items():
+                    self[obsv] = times + self_get(obsv)
+            # called in __init__
+            else:
+                self._total = sum(iterable.values())
+                self._distr.update(iterable)  # faster than adding one at a time
+        elif isinstance(iterable, Iterable):
+            for item in iterable:
+                self[item] += 1
+
+#################
+# private methods
+#################
+
+    def __getitem__(self, key):
+        # does not raise a KeyError if event not yet observed
+        return self._distr.get(key, 0)
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, int) or value < 0:
+            raise ValueError("Values of Distribution need to be positive integers.")
+        self._total += (value - self[key])
+        self._distr[key] = value
+
+    def __delitem__(self, key):
+        if key in self._distr:
+            self._total -= self._distr[key]
+            del self._distr[key]
+
+    def __iter__(self):
+        return iter(self._distr)
+
+    def __len__(self):
+        return len(self._distr)
+
 
 class IntegerDistribution(Distribution):
-    @log_exception(LOG)
-    def inc(self, item):
-        """Add one observation.
+    """Subclass of Distribution.
 
-        Args:
-            item(int): Data point to be added.
-        """
-        if not isinstance(item, int):
-            raise TypeError("items have to be of type integer")
-        super().inc(item)
+    See DocString for Distribution.
+    Additionally is guaranteed to contain
+    only keys of type integer.
 
+    Args:
+        iterable(Optional[Iterable]): When given,
+            initialize the distribution with its items.
+
+    Attributes:
+        _distr(dict): The mapping.
+        _total(int): Total number of items in the distribution.
+    """
     @log_exception(LOG)
     def mean(self):
         """Sample arithmetic mean (average).
@@ -132,7 +183,7 @@ class IntegerDistribution(Distribution):
                 divided by the number of observations.
         """
         if self._total < 1:
-            raise ScarceDataError("method 'mean' needs atleast one data point")
+            raise ScarceDataError("Method 'mean' needs at least one data point.")
         return sum(map(lambda x: x[0]*x[1], self.items()))/self._total
 
     @log_exception(LOG)
@@ -140,23 +191,24 @@ class IntegerDistribution(Distribution):
         """Corrected sample variance.
 
         Args:
-            m(int): Precalculated mean if existing.
+            m(Optional[float]): Precalculated mean if existing.
 
         Returns:
             float: Measure of the average degree to which
                 each observation differs from the mean.
         """
         if self._total < 2:
-            raise ScarceDataError("method 'mean' needs atleast two data points")
+            raise ScarceDataError("Method 'mean' needs at least two data points.")
         if m is None:
             m = self.mean()
-        return sum(map(lambda x: (x - m)**2, self.elements()))/(self._total - 1)
+        return sum(map(lambda x: self[x]*(x - m)**2, self))/(self._total - 1)
 
+    @log_exception(LOG)
     def stdev(self, m=None):
-        """Corrected sample standard devaiation.
+        """Corrected sample standard deviation.
 
         Args:
-            m(int): Precalculated mean if existing.
+            m(Optional[float]): Precalculated mean if existing.
 
         Returns:
             float: Measure how far observations are
@@ -174,33 +226,33 @@ class IntegerDistribution(Distribution):
         Args:
             title(str): Title to be displayed over the plot.
             label(str): Description of the bars in the legend.
-            start(int): x-Axis left border.
-            end(int): x-Axis right border.
-            steps(int): Distance to put x-Axis ticks at.
-            iterable: Specify to only include a subset of items.
-                If not specified all items are plotted.
+            start(Optional[int]): x-Axis left border.
+            end(Optional[int]): x-Axis right border.
+            steps(Optional[int]): Distance to put x-Axis ticks at.
+            iterable(Optional[]): Specify to only include a subset
+                of observations. If not specified all are plotted.
         """
         if not iterable:
             iterable = self.keys()
             if not iterable:
-                raise ScarceDataError("Method 'plot' requires atleast one data point.")
+                raise ScarceDataError("Method 'plot' requires at least one data point.")
         else:
             # because we need to iterate more than once
             if iter(iterable) is iterable:
                 iterable = list(iterable)
-        iterable = [item for item in iterable if item < end and item > start]
-        # organize data
-        bars = sorted(iterable)
-        heights = [self.prob_dist(iterable)[k] for k in bars]
         # create plot
         fig, ax = plt.subplots()
-        # set axis settings
+        # organize data
+        bars = sorted(iterable)
         if start is None:
             start = bars[0]
         if end is None:
             end = bars[-1]
         if steps is None:
             steps = max(1, (start + end)//10)
+        bars = [bar for bar in bars if start <= bar <= end]
+        heights = [self.prob_dist(iterable)[k] for k in bars]
+        # set axis settings
         ax.set_axisbelow(True)
         ax.set_title(title)
         ax.set_xticks(np.arange(start, end + 1, steps))
@@ -216,3 +268,18 @@ class IntegerDistribution(Distribution):
         ax.plot(bars, heights, color='mediumseagreen')
         ax.legend()
         plt.show()
+
+    @log_exception(LOG)
+    def update(self, iterable):
+        if any(map(lambda x: not isinstance(x, int), iterable)):
+            raise TypeError("Keys of IntegerDistribution need to be integers.")
+        super().update(iterable)
+
+#################
+# private methods
+#################
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, int):
+            raise TypeError("Keys of IntegerDistribution have to be integers.")
+        super().__setitem__(key, value)
