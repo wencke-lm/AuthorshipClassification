@@ -71,7 +71,7 @@ if __name__ == "__main__":
         LOG.info("Synopsis:")
         LOG.info("$ python scripts\\evaluate.py CATALOG FILENAME TEST_DIRECTORY\n")
         LOG.info("CATALOG         Path to the csv-file containing lines of the\n"
-                 "                form <author>\\t<pretrained model csv-filepath>\n"
+                 "                form <author>\\t<pretrained model JSON-filepath>\n"
                  "                created by AuthorIdent.")
         LOG.info("FILENAME        Where to save the results.")
         LOG.info("TEST_DIRECTORY  Path to the 'test' folder created by splitting the data.")

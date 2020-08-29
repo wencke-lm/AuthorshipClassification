@@ -52,7 +52,7 @@ The following steps are necessary for initializing the project environment:
    ```
 + Download the [Gutenberg Dataset](https://web.eecs.umich.edu/~lahiri/gutenberg_dataset.html) .
 + Unzip *Gutenberg.zip*.
-+ If you'd like to choose your own author set, modify *data\author_config.json*. Otherwise material from 10 predefined authors will be selected.
++ (recommended) If you'd like to choose your own author set, modify *data\author_config.json*. Otherwise material from 10 predefined authors will be selected.
 + Execute the following command from the root directory of the project(**execution time: ~15min**):
   ```sh
    $ python scripts\split_corpus.py PATH_TO_UNZIPPED_GUTENBERG
@@ -95,7 +95,7 @@ Additionally a target --verbosity can be used with any of the above schemes to a
     + Name of the class.
     + This name will be put out, when the classifier identifies a text as belonging to the class.
 + CATALOG
-   + Path to a csv-file containing lines of the form <author>\t<pretrained model csv-filepath> created by AuthorIdent.
+   + Path to a csv-file containing lines of the form <author>\t<pretrained model JSON-filepath> created by AuthorIdent.
    + It is advisable and necessary that catalogs are always accessed from the same working directory.
 Otherwise problems involving the relative paths to the profiles saved in it will occur.
 + FILENAME
@@ -123,6 +123,12 @@ For those commands to be succesfully executed the passed file paths of course ha
   ```sh
    $ python scripts\evaluate.py data\gutenbergident.csv data\eval.csv corpus\test
    ```
+
+## Running Time
+Training for all the 10 chosen authors takes up 1h 30min.
+I chose the authors with the largest amount of data under their name to have as much data in the test set as possible.
+But for anyone testing the program I would recommend specifying only up to three authors in *data\author_config.json*.
+For example Alexander Pope and Abraham Lincoln.
 
 ## Author
 Wencke Liermann  
