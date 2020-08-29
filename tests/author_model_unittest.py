@@ -10,6 +10,7 @@
 # Windows 8
 """author_model.py testcases."""
 
+import json
 import logging
 import os
 import re
@@ -46,6 +47,11 @@ class IOInteractionTestCase(unittest.TestCase):
                 result = False
         os.rmdir(os.path.join("tests", "data", "temp"))
         self.assertTrue(result)
+
+    def test_processing_with_json_hook(self):
+        data = json.loads('{"1": 27, "5": 42, "2": 80}',
+                          object_hook=AuthorModel._objectkeys_to_ints)
+        self.assertEqual(data, {1: 27, 5: 42, 2: 80})
 
     def test_reading_in_corrupted_json_missing_value(self):
         with self.assertRaises(ValueError) as exc:

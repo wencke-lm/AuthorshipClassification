@@ -22,6 +22,7 @@ from lib.author_model import AuthorModel
 
 
 LOG = logging.getLogger(__name__)
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 class LoggingErrorFilter(logging.Filter):
@@ -38,7 +39,7 @@ def configure_parser():
                "one sentence per line and a space between tokens.")
     parser.add_argument('--catalog', nargs=1, metavar="CATALOG",
                         help="Path to a file containing lines of the form "
-                             r"<author>\t<pretrained model csv-filename> .")
+                             r"<author>\t<pretrained model json-filename> .")
     parser.add_argument('--classify', nargs=1, metavar="SOURCE",
                         help="Return the most likely author for the given text.")
     parser.add_argument("--destroy", action="store_true",
@@ -58,7 +59,7 @@ def configure_parser():
 
 def configure_logging(verbosity):
     """Create handlers and set levels for logging."""
-    with open(os.path.join("data", "log_config.json"), "r", encoding='utf-8') as fd:
+    with open(os.path.join(ROOT, "data", "log_config.json"), "r", encoding='utf-8') as fd:
         setting = json.load(fd)
         setting["filters"]["errorfilter"]["()"] = LoggingErrorFilter
         setting["handlers"]["console"]["level"] = ["ERROR", "WARNING", "INFO"][verbosity]

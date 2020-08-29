@@ -143,6 +143,18 @@ class TrainTestCase(unittest.TestCase):
     def test_profile_file_created(self):
         self.mock_author_model.write_json.assert_called_with("author2.json")
 
+    @mock.patch("lib.author_ident.AuthorIdent", catalog="tests\\data\\frozen.txt",
+                catalog_content={"anna": "tests\\data\\anna.json"},
+                profiles={"anna": {}}, autospec=True)
+    @mock.patch("lib.author_ident.AuthorModel", autospec=True)
+    def test_training_with_filename_exists_as_json(self, mock_author_model, mock_author_ident):
+        mock_author_model.train.return_value = mock_author_model
+        mock_author_model.write_json.return_value = mock_author_model
+        with mock.patch('lib.author_ident.open', mock.mock_open()) as filesys_mock:
+            AuthorIdent.train(mock_author_ident, "elsa", "elsa.txt")
+        self.assertEqual(mock_author_ident.catalog_content["elsa"],
+                         "tests\\data\\elsa(2).json")
+
     def test_training_for_an_existing_author(self):
         with self.assertRaises(CatalogError):
             AuthorIdent.train(self.mock_author_ident, "author1", "author1.txt")
