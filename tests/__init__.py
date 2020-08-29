@@ -9,6 +9,7 @@
 # Windows 8
 """Collection of all project testcases."""
 
+import os
 import unittest
 
 from tests.mtld_unittest import *
@@ -18,6 +19,7 @@ from tests.distribution_unittest import *
 
 
 def main(verbosity):
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     project_suite = unittest.TestSuite()
     project_suite.addTest(unittest.makeSuite(AccuracyTestCase))
     project_suite.addTest(unittest.makeSuite(ClassifyTestCase))

@@ -30,7 +30,7 @@ LOG.addHandler(logging.StreamHandler())
 
 def evaluate(catalog, filename, test_dir):
     """Evaluate the accuracy of a trained system.
-    
+
     Accuracies for the whole system and single authors are given
     out to the commandline, while a csv-file is created that
     contains classified files together with their gold standard
@@ -50,10 +50,10 @@ def evaluate(catalog, filename, test_dir):
         classifer = AuthorIdent(catalog)
         correct = 0
         total = 0
-        for author in os.listdir(test_dir):
+        for author in tqdm(os.listdir(test_dir), leave=False):
             correct_author = 0
             total_author = 0
-            for file in os.listdir(os.path.join("corpus", "test", author)):
+            for file in tqdm(os.listdir(os.path.join("corpus", "test", author)), leave=False):
                 result = classifer.classify(os.path.join(test_dir, author, file))
                 if result == author:
                     correct += 1

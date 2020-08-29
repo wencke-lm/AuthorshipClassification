@@ -46,7 +46,7 @@ class AuthorIdent:
 
     Args:
         catalog(str): Path to a file containing lines of the form
-            <author>\t<pretrained model csv-filename> .
+            <author>\t<pretrained model json-filename> .
 
     Attributes:
         catalog(str): Stored catalog filename.

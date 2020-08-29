@@ -27,7 +27,8 @@ from lib.mtld import mtld
 
 
 LOG = logging.getLogger(__name__)  # module logger
-FREQ_WRDS = os.path.join("data", "most_common_words.csv")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FREQ_WRDS = os.path.join(ROOT, "data", "most_common_words.csv")
 
 
 class AuthorModel:
@@ -222,7 +223,7 @@ class AuthorModel:
     @log_exception(LOG)
     def _extract_features(self, files):
         """Build up feature vectors."""
-        for file in tqdm(files):
+        for file in tqdm(files, leave=False):
             try:
                 self.mtld += mtld(self._get_words(file))
             except ScarceDataError as exc:

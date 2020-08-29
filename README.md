@@ -14,14 +14,14 @@ its attributes are feature vectors for features belonging to different categorie
 The **nltk** library was used to perform the natural language processing necessary for the underlying feature extraction and mainly visible in the 
 function *AuthorModel._nlp* where tokens are enriched with e.g. information about their POS-Tag and lemma, before they are finally returned as **namedtuple**s 
 in blocks of complete sentences. Feature extraction is performed in the Function *AuthorModel._extract_features*.
-To return all normalized features in a single a vector the function *AuthorModel.normalized_feature_vector* is used.
+To return all normalized features in a single vector the function *AuthorModel.normalized_feature_vector* is used.
 The user interface to those methods is the function *AuthorModel.train*. Furthermore, the functions *AuthorModel.write_json* and *AuthorModel.read_json* offer
 the possibility of respectively saving and loading trained feature matrices.  
 The class *AuthorIdent* can be seen as a feature matrix or profile management system, providing several services to the user including adding (*AuthorIdent.train*)
 and deleting (*AuthorIdent.forget*) profiles as well as performing the classification task (*AuthorIdent.classify*) based on the added profiles.
 While those two classes are the main pillars of the project, another module *mtld.py* includes an implementation of the vocabulary richness score MTLD chosen because
 it is said to be the measure most immune to varying text lengths a characteristic deemed important for the chosen data set.
-*distributions.py* includes subclasses of **Counter**. They are used for normalizing counts and have been used to produce visualizations of the data
+*distributions.py* includes subclasses of **MutableMapping**. They are used for normalizing counts and have been used to produce visualizations of the data
 with **matplotlib** and **numpy**, but this functionality is not directly accessible in the framework of the project.
 
 Other modules used are **tqdm** and from the standard library **functools**, **logging**, **os**, **sys**, **types**, **unittest**, **re**, **json**.
@@ -66,28 +66,28 @@ The following steps are necessary for initializing the project environment:
 Enter a command following the scheme below in order to:
 + Add a new class to the classifier:
     ```sh
-   python main.py --catalog CATALOG --train AUTHOR SOURCE
-   ```
+    python main.py --catalog CATALOG --train AUTHOR SOURCE
+    ```
 + Delete an existing class from the classifier:
     ```sh
-   python main.py --catalog CATALOG --forget AUTHOR
-   ```
+    python main.py --catalog CATALOG --forget AUTHOR
+    ```
 + Delete the catalog and every class inside it:
     ```sh
-   python main.py --catalog CATALOG --destroy
-   ```
+    python main.py --catalog CATALOG --destroy
+    ```
 + Perform the classification task based on a catalog with trained classes:
     ```sh
-   python main.py --catalog CATALOG --classify SOURCE
-   ```
+    python main.py --catalog CATALOG --classify SOURCE
+    ```
 + Preprocess a file to make it admittable as a SOURCE argument:
     ```sh
-   python main.py --preprocess FILENAME GOAL
-   ```
+    python main.py --preprocess FILENAME GOAL
+    ```
 + Run all unittests.
     ```sh
-   python main.py --test
-   ```
+    python main.py --test
+    ```
 Additionally a target --verbosity can be used with any of the above schemes to adjust the amout of output (0=errors, 1=warnings and above, 2=info and above). Default is 1.
 
 ## Arguments
@@ -108,20 +108,20 @@ Otherwise problems involving the relative paths to the profiles saved in it will
 
 ## Examples
 For those commands to be succesfully executed the passed file paths of course have to exist.
-+ `python main.py --catalog data\gutenbergident.txt --forget "Anthony Trollope"`
-+ `python main.py --catalog data\gutenbergident.txt --train  "Anthony Trollope" "corpus\\training\\Anthony Trollope"`
-+ `python main.py --catalog data\gutenbergident.txt --classify "corpus\\test\\Anthony Trollope\\Anthony Trollope___Lady Anna.txt"`
++ `python main.py --catalog data\gutenbergident.csv --forget "Anthony Trollope"`
++ `python main.py --catalog data\gutenbergident.csv --train  "Anthony Trollope" "corpus\\training\\Anthony Trollope"`
++ `python main.py --catalog data\gutenbergident.csv --classify "corpus\\test\\Anthony Trollope\\Anthony Trollope___Lady Anna.txt"`
 + `python main.py --preprocess "Aldous Huxley___Mortal Coils.txt" "Aldous Huxley___Mortal Coils.pre"`
 
 
 ## Accuracy
-+ Executing the following command from the root directory of the project will calculate the accuracy over the test set(**execution time: ~30min**):
++ Executing the following command from the root directory of the project will calculate the accuracy over the test set (**execution time: ~30min**):
   ```sh
    $ python scripts\evaluate.py CATALOG FILENAME TEST_DIRECTORY
    ```
    If saved in the root directory of the project e.g.:
   ```sh
-   $ python scripts\evaluate.py data\gutenbergident.txt data\eval.csv corpus\test
+   $ python scripts\evaluate.py data\gutenbergident.csv data\eval.csv corpus\test
    ```
 
 ## Author
